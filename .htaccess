@@ -1,0 +1,8 @@
+# If the document root is the project folder rather than public/, forward
+# everything into public/ so nothing outside it is ever reachable.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(?!public/)(.*)$ public/$1 [L]
+</IfModule>
+
+Options -Indexes

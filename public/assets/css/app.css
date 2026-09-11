@@ -1,0 +1,45 @@
+/*
+ * Sunrise Films - small stylesheet that sits alongside Tailwind.
+ *
+ * Tailwind carries the layout; this file holds the handful of rules that are
+ * awkward to express as utilities, plus a readable fallback if the Tailwind
+ * CDN is unreachable.
+ */
+
+/* Keep these in step with the Tailwind tokens in app/Views/partials/theme.php. */
+:root {
+    color-scheme: light;
+    --sf-brand: #5145e5;
+    --sf-brand-gradient-from: #5b52e8;
+    --sf-brand-gradient-to: #7c5ce8;
+    --sf-ink: #111735;
+    --sf-canvas: #f4f5fa;
+    --sf-line: #e8eaf3;
+}
+
+body {
+    font-family: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Browsers add their own reveal control to password inputs; ours is the one
+   the spec asks for, so hide the duplicate. */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+    display: none;
+}
+
+/* Visible keyboard focus everywhere, including where Tailwind resets it. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+    outline: 2px solid var(--sf-brand);
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+    }
+}
