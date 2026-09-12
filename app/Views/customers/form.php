@@ -52,11 +52,14 @@ $back   = $isEdit ? $baseUrl . '/' . $customer->id : $baseUrl;
             </div>
 
             <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <div>
+                <div class="relative" data-suggest data-suggest-url="<?= e($baseUrl) ?>/suggest">
                     <label for="field-name" class="mb-1.5 block text-sm font-medium text-slate-700">Customer name</label>
                     <input type="text" id="field-name" name="name"
                            value="<?= old($old, 'name', $customer->name ?? '') ?>"
-                           class="<?= input_classes($errors, 'name') ?>" placeholder="Ravi Kulkarni" autofocus>
+                           class="<?= input_classes($errors, 'name') ?>" placeholder="Ravi Kulkarni" autofocus
+                           autocomplete="off" data-suggest-input>
+                    <ul data-suggest-list
+                        class="absolute left-0 right-0 top-full z-20 mt-1 hidden max-h-72 overflow-y-auto rounded-lg border border-line bg-white py-1 text-sm shadow-lg"></ul>
                     <?= field_error($errors, 'name') ?>
                 </div>
 
@@ -68,11 +71,14 @@ $back   = $isEdit ? $baseUrl . '/' . $customer->id : $baseUrl;
                     <?= field_error($errors, 'email') ?>
                 </div>
 
-                <div>
+                <div class="relative" data-suggest data-suggest-url="<?= e($baseUrl) ?>/suggest">
                     <label for="field-phone" class="mb-1.5 block text-sm font-medium text-slate-700">Mobile number</label>
                     <input type="tel" id="field-phone" name="phone"
                            value="<?= old($old, 'phone', $customer->phone ?? '') ?>"
-                           class="<?= input_classes($errors, 'phone') ?>" placeholder="+91 98765 43210">
+                           class="<?= input_classes($errors, 'phone') ?>" placeholder="+91 98765 43210"
+                           autocomplete="off" data-suggest-input>
+                    <ul data-suggest-list
+                        class="absolute left-0 right-0 top-full z-20 mt-1 hidden max-h-72 overflow-y-auto rounded-lg border border-line bg-white py-1 text-sm shadow-lg"></ul>
                     <?= field_error($errors, 'phone') ?>
                 </div>
 

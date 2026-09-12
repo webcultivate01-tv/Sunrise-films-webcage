@@ -13,6 +13,7 @@ use App\Controllers\MyWorkController;
 use App\Controllers\PaymentController;
 use App\Controllers\ProfileController;
 use App\Controllers\ProjectController;
+use App\Controllers\ReportController;
 use App\Controllers\SalaryController;
 use App\Controllers\TaskController;
 use App\Core\Config;
@@ -145,6 +146,11 @@ return static function (Router $router): void {
                     $router->get('/monthly-salary/{id}', [SalaryController::class, 'show']);
                     $router->get('/monthly-salary/{id}/settle', [SalaryController::class, 'settleForm']);
                     $router->post('/monthly-salary/{id}/settle', [SalaryController::class, 'settle'], ['csrf']);
+
+                    // --- Reports ---------------------------------------------
+                    $router->get('/reports', [ReportController::class, 'index']);
+                    $router->get('/reports/{type}/pdf', [ReportController::class, 'pdf']);
+                    $router->get('/reports/{type}/excel', [ReportController::class, 'excel']);
                 },
             );
         }

@@ -87,10 +87,13 @@ final class Project
      * Deadline (soonest first) is the default sort - it is what lets an
      * Admin/Manager see at a glance which projects need attention next.
      *
+     * $startDate/$endDate narrow to projects registered in that range
+     * (Reports: Work Report) - blank means no bound either side.
+     *
      * @param string $sort '' (deadline soonest, default) | deadline_desc | newest | oldest
      * @return list<self>
      */
-    public static function all(string $search = '', string $status = '', ?int $customerId = null, string $sort = ''): array
+    public static function all(string $search = '', string $status = '', ?int $customerId = null, string $sort = '', string $startDate = '', string $endDate = ''): array
     {
         $sql      = 'SELECT p.*, c.name AS customer_name, u.name AS created_by_name
                        FROM projects p
@@ -113,6 +116,16 @@ final class Project
         if ($customerId !== null) {
             $sql .= ' AND p.customer_id = ?';
             $bindings[] = $customerId;
+        }
+
+        if ($startDate !== '') {
+            $sql .= ' AND p.created_at >= ?';
+            $bindings[] = $startDate . ' 00:00:00';
+        }
+
+        if ($endDate !== '') {
+            $sql .= ' AND p.created_at <= ?';
+            $bindings[] = $endDate . ' 23:59:59';
         }
 
         $sql .= match ($sort) {

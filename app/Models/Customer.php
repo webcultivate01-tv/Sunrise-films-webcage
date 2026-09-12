@@ -87,9 +87,12 @@ final class Customer
      * s5). Every Admin and Manager sees every customer (module spec s13), so
      * there is no ownership filter here.
      *
+     * $startDate/$endDate narrow to customers registered in that range
+     * (Reports: Customer Report) - blank means no bound either side.
+     *
      * @return list<self>
      */
-    public static function all(string $search = '', string $status = ''): array
+    public static function all(string $search = '', string $status = '', string $startDate = '', string $endDate = ''): array
     {
         $sql      = 'SELECT c.*, u.name AS created_by_name
                        FROM customers c
@@ -106,6 +109,16 @@ final class Customer
         if ($status !== '') {
             $sql .= ' AND c.status = ?';
             $bindings[] = $status;
+        }
+
+        if ($startDate !== '') {
+            $sql .= ' AND c.created_at >= ?';
+            $bindings[] = $startDate . ' 00:00:00';
+        }
+
+        if ($endDate !== '') {
+            $sql .= ' AND c.created_at <= ?';
+            $bindings[] = $endDate . ' 23:59:59';
         }
 
         $rows = Database::select($sql . ' ORDER BY c.id DESC', $bindings);

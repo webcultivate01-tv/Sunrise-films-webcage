@@ -163,6 +163,60 @@ final class User
     }
 
     /**
+     * The Employee Report listing (Reports module): Managers and Employees
+     * only - never Admin accounts - narrowed by role, status, a date range on
+     * `created_at` and a free-text search, newest first.
+     *
+     * @param array<string, string> $filters q, role, status, start_date, end_date
+     * @return list<self>
+     */
+    public static function forReport(array $filters = []): array
+    {
+        $sql      = "SELECT * FROM users WHERE role IN ('manager', 'employee')";
+        $bindings = [];
+
+        $role = $filters['role'] ?? '';
+
+        if (in_array($role, [self::ROLE_MANAGER, self::ROLE_EMPLOYEE], true)) {
+            $sql       .= ' AND role = ?';
+            $bindings[] = $role;
+        }
+
+        $status = $filters['status'] ?? '';
+
+        if (in_array($status, [self::STATUS_ACTIVE, self::STATUS_INACTIVE, self::STATUS_SUSPENDED], true)) {
+            $sql       .= ' AND status = ?';
+            $bindings[] = $status;
+        }
+
+        $search = trim($filters['q'] ?? '');
+
+        if ($search !== '') {
+            $sql .= ' AND (name LIKE ? OR email LIKE ? OR phone LIKE ?)';
+            $like = Database::like($search);
+            array_push($bindings, $like, $like, $like);
+        }
+
+        $startDate = trim($filters['start_date'] ?? '');
+
+        if ($startDate !== '') {
+            $sql       .= ' AND created_at >= ?';
+            $bindings[] = $startDate . ' 00:00:00';
+        }
+
+        $endDate = trim($filters['end_date'] ?? '');
+
+        if ($endDate !== '') {
+            $sql       .= ' AND created_at <= ?';
+            $bindings[] = $endDate . ' 23:59:59';
+        }
+
+        $rows = Database::select($sql . " ORDER BY FIELD(role, 'manager', 'employee'), id DESC", $bindings);
+
+        return array_map(self::fromRow(...), $rows);
+    }
+
+    /**
      * How many accounts $ownerId created. Used before deleting a Manager: one
      * that still owns Employees is deactivated instead, so their team is never
      * silently orphaned.

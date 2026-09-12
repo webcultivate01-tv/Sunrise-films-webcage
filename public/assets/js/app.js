@@ -68,11 +68,14 @@
     }
 
     /**
-     * Live search suggestions: the Customer and Employee Management search
-     * boxes carry a [data-suggest] wrapper around the <input> and an empty
-     * <ul data-suggest-list>. As the user types, matching records are fetched
-     * from the panel's own "/suggest" endpoint and listed as links so picking
-     * one jumps straight to that record.
+     * Live search suggestions: a [data-suggest] wrapper around the <input>
+     * carries an empty <ul data-suggest-list>. As the user types, matching
+     * records are fetched from the panel's own "/suggest" endpoint. By
+     * default each result is a link that jumps straight to that record
+     * (the Customer, Employee, Work etc. search boxes); a wrapper marked
+     * data-suggest-mode="fill" instead fills the picked value straight into
+     * the input without navigating, for filter fields like the Reports
+     * search boxes that only feed a form.
      */
     function bindSearchSuggestions() {
         var containers = document.querySelectorAll('[data-suggest]');
@@ -81,6 +84,7 @@
             var input = container.querySelector('[data-suggest-input]');
             var list  = container.querySelector('[data-suggest-list]');
             var url   = container.getAttribute('data-suggest-url');
+            var fill  = container.getAttribute('data-suggest-mode') === 'fill';
 
             if (!input || !list || !url) {
                 return;
@@ -105,10 +109,15 @@
 
                 results.forEach(function (item) {
                     var li   = document.createElement('li');
-                    var link = document.createElement('a');
+                    var link = document.createElement(fill ? 'button' : 'a');
 
-                    link.href      = item.url;
-                    link.className = 'block px-3.5 py-2 text-sm hover:bg-slate-50';
+                    if (fill) {
+                        link.type = 'button';
+                    } else {
+                        link.href = item.url;
+                    }
+
+                    link.className = 'block w-full px-3.5 py-2 text-left text-sm hover:bg-slate-50';
 
                     var name = document.createElement('p');
                     name.className = 'font-medium text-ink';
@@ -120,6 +129,14 @@
                         sub.className = 'text-xs text-slate-500';
                         sub.textContent = item.sub;
                         link.appendChild(sub);
+                    }
+
+                    if (fill) {
+                        link.addEventListener('click', function () {
+                            input.value = item.name;
+                            closeList();
+                            input.focus();
+                        });
                     }
 
                     li.appendChild(link);

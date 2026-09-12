@@ -60,10 +60,8 @@ final class PanelModules
      */
     private const PLACEHOLDERS = [
         'admin' => [
-            'reports',
         ],
         'manager' => [
-            'reports',
         ],
         'employee' => [
         ],
@@ -84,6 +82,7 @@ final class PanelModules
             ['id' => 'task-management', 'path' => '/tasks'],
             ['id' => 'payments-management', 'path' => '/payments'],
             ['id' => 'monthly-salary', 'path' => '/monthly-salary'],
+            ['id' => 'reports', 'path' => '/reports'],
         ],
         'manager' => [
             ['id' => 'customer-management', 'path' => '/customers'],
@@ -92,6 +91,7 @@ final class PanelModules
             ['id' => 'task-management', 'path' => '/tasks'],
             ['id' => 'payments-management', 'path' => '/payments'],
             ['id' => 'monthly-salary', 'path' => '/monthly-salary'],
+            ['id' => 'reports', 'path' => '/reports'],
         ],
         'employee' => [
             ['id' => 'task-management', 'path' => '/my-work'],
