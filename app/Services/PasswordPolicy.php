@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Core\Config;
 use App\Core\Validator;
+use App\Models\Setting;
 
 /**
  * One password policy for Admin, Manager and Employee alike (spec s9), so
@@ -16,7 +16,7 @@ final class PasswordPolicy
 {
     public static function minLength(): int
     {
-        return max(6, (int) Config::get('auth.password_min', 8));
+        return Setting::current()->passwordMinLength;
     }
 
     public static function description(): string
@@ -65,6 +65,42 @@ final class PasswordPolicy
         if (!hash_equals($password, $confirmation)) {
             $validator->add($confirmField, 'Passwords do not match.');
         }
+    }
+
+    /**
+     * A temporary password for a newly created account. The Employee
+     * Management form does not ask the creator for one (module spec s7), so
+     * the system generates it, emails it with the welcome message and shows it
+     * to the creator once.
+     *
+     * Always satisfies validate(): letters and digits only, from an alphabet
+     * with no 0/O or 1/l/I, so it survives being read aloud or copied by hand.
+     */
+    public static function generate(): string
+    {
+        $letters = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ';
+        $digits  = '23456789';
+        $length  = max(self::minLength(), 12);
+
+        // Guarantee the letter and the digit the policy requires, then fill the
+        // rest from both alphabets and shuffle so their positions are random.
+        $characters = [
+            $letters[random_int(0, strlen($letters) - 1)],
+            $digits[random_int(0, strlen($digits) - 1)],
+        ];
+
+        $pool = $letters . $digits;
+
+        for ($i = count($characters); $i < $length; $i++) {
+            $characters[] = $pool[random_int(0, strlen($pool) - 1)];
+        }
+
+        for ($i = count($characters) - 1; $i > 0; $i--) {
+            $j = random_int(0, $i);
+            [$characters[$i], $characters[$j]] = [$characters[$j], $characters[$i]];
+        }
+
+        return implode('', $characters);
     }
 
     public static function hash(string $password): string

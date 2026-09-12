@@ -13,8 +13,8 @@ final class PanelModules
 {
     /** @var array<string, array{label:string, description:string, icon:string}> */
     private const MODULES = [
-        'customer-registration' => [
-            'label'       => 'Customer Registration',
+        'customer-management' => [
+            'label'       => 'Customer Management',
             'description' => 'Register new customers and maintain existing customer records.',
             'icon'        => '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/>',
         ],
@@ -48,33 +48,64 @@ final class PanelModules
             'description' => 'Monthly salary statements, deductions and payout history.',
             'icon'        => '<path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/>',
         ],
-        'admin-management' => [
-            'label'       => 'Admin Management',
-            'description' => 'Manage administrator accounts, roles and system-level settings.',
-            'icon'        => '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/>',
-        ],
     ];
 
     /**
      * Placeholder module ids shown on each role's panel, in sidebar order.
-     * Modules already covered by a real page (the "manages" link, dashboard,
-     * profile) are left out here so the sidebar never lists the same thing twice.
+     * Modules already covered by a real page (Customer Management, Employee
+     * Management, the dashboard and the profile) are left out here so the
+     * sidebar never lists the same thing twice.
      *
      * @var array<string, list<string>>
      */
     private const PLACEHOLDERS = [
         'admin' => [
-            'customer-registration', 'employee-management', 'work-management', 'task-management',
-            'reports', 'payments-management', 'monthly-salary', 'admin-management',
+            'reports',
         ],
         'manager' => [
-            'customer-registration', 'work-management', 'task-management',
-            'reports', 'payments-management', 'monthly-salary',
+            'reports',
         ],
         'employee' => [
-            'task-management', 'monthly-salary',
         ],
     ];
+
+    /**
+     * The modules that are built and routed, in sidebar order, for the roles
+     * allowed to open them (module spec s2, s6). The sidebar renders these as
+     * real links above the placeholders.
+     *
+     * @var array<string, list<array{id:string, path:string}>>
+     */
+    private const BUILT = [
+        'admin' => [
+            ['id' => 'customer-management', 'path' => '/customers'],
+            ['id' => 'employee-management', 'path' => '/employees'],
+            ['id' => 'work-management', 'path' => '/projects'],
+            ['id' => 'task-management', 'path' => '/tasks'],
+            ['id' => 'payments-management', 'path' => '/payments'],
+            ['id' => 'monthly-salary', 'path' => '/monthly-salary'],
+        ],
+        'manager' => [
+            ['id' => 'customer-management', 'path' => '/customers'],
+            ['id' => 'employee-management', 'path' => '/employees'],
+            ['id' => 'work-management', 'path' => '/projects'],
+            ['id' => 'task-management', 'path' => '/tasks'],
+            ['id' => 'payments-management', 'path' => '/payments'],
+            ['id' => 'monthly-salary', 'path' => '/monthly-salary'],
+        ],
+        'employee' => [
+            ['id' => 'task-management', 'path' => '/my-work'],
+            ['id' => 'monthly-salary', 'path' => '/my-salary'],
+        ],
+    ];
+
+    /**
+     * @return list<array{id:string, path:string}>
+     */
+    public static function built(string $role): array
+    {
+        return self::BUILT[$role] ?? [];
+    }
 
     /**
      * @return list<string>

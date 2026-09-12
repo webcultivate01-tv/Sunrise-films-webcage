@@ -1,7 +1,6 @@
 <?php
 
 use App\Models\User;
-use App\Services\UserService;
 use App\Support\PanelModules;
 
 /**
@@ -28,13 +27,14 @@ if ($user !== null) {
             . '<rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
     ];
 
-    $manages = UserService::manageableRole($user);
+    // Modules that are built and routed for this role (module spec s2, s6).
+    foreach (PanelModules::built($user->role) as $built) {
+        $module = PanelModules::module($built['id']);
 
-    if ($manages !== null) {
         $navItems[] = [
-            'url'   => $base . '/' . $manages . 's',
-            'label' => (string) config('roles.' . $manages . '.label') . ' Management',
-            'icon'  => PanelModules::module('employee-management')['icon'],
+            'url'   => $base . $built['path'],
+            'label' => $module['label'],
+            'icon'  => $module['icon'],
         ];
     }
 
@@ -70,20 +70,22 @@ $currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
     <link rel="stylesheet" href="/assets/css/app.css">
 </head>
 <body class="h-full bg-canvas text-ink antialiased">
-<input type="checkbox" id="nav-toggle" class="peer hidden">
 
 <div class="min-h-full lg:flex">
+    <input type="checkbox" id="nav-toggle" class="peer hidden">
     <label for="nav-toggle"
            class="fixed inset-0 z-30 hidden bg-black/30 peer-checked:block lg:hidden" aria-hidden="true"></label>
 
     <!-- ============ Sidebar ============ -->
     <aside class="fixed inset-y-0 left-0 z-40 flex w-72 -translate-x-full flex-col border-r border-line bg-white text-ink transition-transform duration-200 peer-checked:translate-x-0 lg:translate-x-0 lg:shrink-0">
         <div class="flex items-center gap-3 border-b border-line px-5 py-5">
-            <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-gradient text-xs font-bold text-white">SF</span>
-            <div class="min-w-0 leading-tight">
-                <p class="truncate text-sm font-semibold"><?= e($appName) ?></p>
-                <p class="truncate text-xs text-slate-500"><?= $user !== null ? e($user->roleLabel()) : '' ?> Panel</p>
-            </div>
+            <a href="<?= e($base) ?>/dashboard" class="flex min-w-0 items-center gap-3">
+                <img src="/assets/img/sunrise-mark.png" alt="<?= e($appName) ?>" class="h-9 w-9 shrink-0 object-contain">
+                <div class="min-w-0 leading-tight">
+                    <p class="truncate text-sm font-semibold"><?= e($appName) ?></p>
+                    <p class="truncate text-xs text-slate-500"><?= $user !== null ? e($user->roleLabel()) : '' ?> Panel</p>
+                </div>
+            </a>
         </div>
 
         <nav class="flex-1 px-3 py-4" aria-label="Panel navigation">
@@ -137,7 +139,7 @@ $currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 
     <div class="flex min-h-full flex-1 flex-col lg:ml-72">
         <!-- ============ Top bar ============ -->
-        <header class="flex items-center gap-4 border-b border-line bg-white px-5 py-3.5 sm:px-8">
+        <header class="sticky top-0 z-20 flex items-center gap-4 border-b border-line bg-white px-5 py-3.5 sm:px-8">
             <label for="nav-toggle"
                    class="grid h-9 w-9 shrink-0 cursor-pointer place-items-center rounded-lg border border-slate-200 text-slate-600 lg:hidden">
                 <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -152,6 +154,9 @@ $currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
                 <div class="hidden text-right sm:block">
                     <p class="text-sm font-medium leading-tight"><?= e($user->name) ?></p>
                     <p class="text-xs text-slate-500"><?= e($user->email) ?></p>
+                    <p class="text-[11px] text-slate-400">
+                        Last sign-in: <?= e(pretty_date($user->lastLoginAt, 'this is your first sign-in')) ?>
+                    </p>
                 </div>
                 <?php if ($user->photoUrl() !== null): ?>
                     <img src="<?= e($user->photoUrl()) ?>" alt="" class="h-9 w-9 shrink-0 rounded-full object-cover ring-1 ring-line">

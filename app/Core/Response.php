@@ -47,6 +47,23 @@ final class Response
     }
 
     /**
+     * A downloadable file body, e.g. a generated salary settlement bill PDF.
+     */
+    public static function binary(string $body, string $contentType, string $filename, int $status = 200): never
+    {
+        if (!headers_sent()) {
+            http_response_code($status);
+            header('Content-Type: ' . $contentType);
+            header('Content-Disposition: attachment; filename="' . str_replace('"', '', $filename) . '"');
+            header('Content-Length: ' . (string) strlen($body));
+        }
+
+        echo $body;
+
+        exit;
+    }
+
+    /**
      * Security headers applied to every response.
      */
     public static function applySecurityHeaders(): void

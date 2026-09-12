@@ -90,40 +90,53 @@ try {
     // -----------------------------------------------------------------------
     echo PHP_EOL . "Account creation hierarchy" . PHP_EOL;
 
-    check('admin manages managers', UserService::manageableRole($admin) === User::ROLE_MANAGER);
+    check('admin can assign manager and employee roles',
+        UserService::assignableRoles($admin) === [User::ROLE_MANAGER, User::ROLE_EMPLOYEE]);
 
-    $manager   = UserService::createSubordinate($admin, [
-        'name'                  => 'Check Manager',
-        'email'                 => $managerEmail,
-        'phone'                 => '',
-        'password'              => 'manager123',
-        'password_confirmation' => 'manager123',
-        'status'                => User::STATUS_ACTIVE,
+    $manager   = UserService::createAccount($admin, [
+        'name'     => 'Check Manager',
+        'email'    => $managerEmail,
+        'phone'    => '9876543210',
+        'address'  => '1 Check Street',
+        'role'     => User::ROLE_MANAGER,
+        'password' => 'manager123',
+        'status'   => User::STATUS_ACTIVE,
     ]);
     $managerId = $manager->id;
 
     check('admin created a manager', $manager->role === User::ROLE_MANAGER && $manager->createdBy === $admin->id);
-    check('manager manages employees', UserService::manageableRole($manager) === User::ROLE_EMPLOYEE);
+    check('manager can assign the employee role only',
+        UserService::assignableRoles($manager) === [User::ROLE_EMPLOYEE]);
 
-    $employee   = UserService::createSubordinate($manager, [
-        'name'                  => 'Check Employee',
-        'email'                 => $employeeEmail,
-        'phone'                 => '',
-        'password'              => 'employee123',
-        'password_confirmation' => 'employee123',
-        'status'                => User::STATUS_ACTIVE,
+    $employee   = UserService::createAccount($manager, [
+        'name'     => 'Check Employee',
+        'email'    => $employeeEmail,
+        'phone'    => '9876501234',
+        'address'  => '2 Check Street',
+        'role'     => User::ROLE_EMPLOYEE,
+        'password' => 'employee123',
+        'status'   => User::STATUS_ACTIVE,
     ]);
     $employeeId = $employee->id;
 
     check('manager created an employee', $employee->role === User::ROLE_EMPLOYEE && $employee->createdBy === $manager->id);
-    check('employee manages nobody', UserService::manageableRole($employee) === null);
+    check('employee can assign no roles', UserService::assignableRoles($employee) === []);
 
-    check('duplicate email is refused', UserService::validateNewAccount([
-        'name'                  => 'Duplicate',
-        'email'                 => $managerEmail,
-        'password'              => 'another123',
-        'password_confirmation' => 'another123',
+    check('duplicate email is refused', UserService::validateAccount($admin, [
+        'name'    => 'Duplicate',
+        'email'   => $managerEmail,
+        'phone'   => '9876543210',
+        'address' => '3 Check Street',
+        'role'    => User::ROLE_MANAGER,
     ])->fails());
+
+    check('a manager cannot assign the manager role', UserService::validateAccount($manager, [
+        'name'    => 'Sneaky Manager',
+        'email'   => 'sneaky-' . $suffix . '@sunrisefilms.test',
+        'phone'   => '9876543210',
+        'address' => '4 Check Street',
+        'role'    => User::ROLE_MANAGER,
+    ])->errors()['role'] === 'You are not authorized to assign that role.');
 
     // -----------------------------------------------------------------------
     echo PHP_EOL . "Role restrictions" . PHP_EOL;
@@ -140,7 +153,7 @@ try {
     $employeeCanReachManager = true;
 
     try {
-        UserService::findSubordinateOrFail($employee, $managerId);
+        UserService::findManagedOrFail($employee, $managerId);
     } catch (Throwable $e) {
         $employeeCanReachManager = false;
     }
@@ -150,7 +163,7 @@ try {
     $managerCanReachManager = true;
 
     try {
-        UserService::findSubordinateOrFail($manager, $managerId);
+        UserService::findManagedOrFail($manager, $managerId);
     } catch (Throwable $e) {
         $managerCanReachManager = false;
     }
@@ -175,13 +188,13 @@ try {
     echo PHP_EOL . "Account status" . PHP_EOL;
 
     $liveToken = TokenService::issue($employee, $request);
-    UserService::setSubordinateStatus($manager, $employee, User::STATUS_SUSPENDED);
+    UserService::setManagedStatus($manager, $employee, User::STATUS_SUSPENDED);
 
     check('suspended account cannot sign in',
         !AuthService::attempt($request, $employeeEmail, 'employee123', User::ROLE_EMPLOYEE)->succeeded);
     check('suspending revokes existing tokens', TokenService::resolve($liveToken) === null);
 
-    UserService::setSubordinateStatus($manager, $employee, User::STATUS_ACTIVE);
+    UserService::setManagedStatus($manager, $employee, User::STATUS_ACTIVE);
     check('reactivated account can sign in again',
         AuthService::attempt($request, $employeeEmail, 'employee123', User::ROLE_EMPLOYEE)->succeeded);
 
@@ -189,7 +202,7 @@ try {
     echo PHP_EOL . "Password reset by a superior" . PHP_EOL;
 
     $survivingToken = TokenService::issue($employee, $request);
-    UserService::resetSubordinatePassword($manager, $employee, 'reset456789');
+    UserService::resetManagedPassword($manager, $employee, 'reset456789');
 
     check('manager reset the employee password',
         AuthService::attempt($request, $employeeEmail, 'reset456789', User::ROLE_EMPLOYEE)->succeeded);
@@ -197,7 +210,7 @@ try {
         !AuthService::attempt($request, $employeeEmail, 'employee123', User::ROLE_EMPLOYEE)->succeeded);
     check('reset revoked the employee tokens', TokenService::resolve($survivingToken) === null);
 
-    UserService::resetSubordinatePassword($admin, $manager, 'reset987654');
+    UserService::resetManagedPassword($admin, $manager, 'reset987654');
     check('admin reset the manager password',
         AuthService::attempt($request, $managerEmail, 'reset987654', User::ROLE_MANAGER)->succeeded);
 

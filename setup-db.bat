@@ -17,19 +17,35 @@ echo.
 
 %MYSQL% -u root -p -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'Mehar@26'; FLUSH PRIVILEGES;"
 if errorlevel 1 goto badpass
-echo  [1/4] root password is now Mehar@26
+echo  [1/8] root password is now Mehar@26
 
 %MYSQL% -u root -pMehar@26 < database\schema.sql
 if errorlevel 1 goto fail
-echo  [2/4] schema loaded into sunrise_films
+echo  [2/8] schema loaded into sunrise_films
 
 php database\seed.php
 if errorlevel 1 goto fail
-echo  [3/4] admin seeded
+echo  [3/8] admin seeded
 
 php tests\auth_check.php
 if errorlevel 1 goto fail
-echo  [4/4] acceptance tests passed
+echo  [4/8] authentication acceptance tests passed
+
+php tests\modules_check.php
+if errorlevel 1 goto fail
+echo  [5/8] customer + employee management acceptance tests passed
+
+php tests\work_management_check.php
+if errorlevel 1 goto fail
+echo  [6/8] work management acceptance tests passed
+
+php tests\task_management_check.php
+if errorlevel 1 goto fail
+echo  [7/8] task management acceptance tests passed
+
+php tests\monthly_salary_check.php
+if errorlevel 1 goto fail
+echo  [8/8] monthly salary acceptance tests passed
 
 echo.
 echo  ======================================================

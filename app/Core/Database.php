@@ -103,4 +103,14 @@ final class Database
     {
         return (int) self::connection()->lastInsertId();
     }
+
+    /**
+     * Wrap a user-supplied search term for a LIKE comparison, escaping the
+     * wildcards so a `%` typed into a search box matches a literal per cent
+     * sign instead of everything.
+     */
+    public static function like(string $term): string
+    {
+        return '%' . str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $term) . '%';
+    }
 }

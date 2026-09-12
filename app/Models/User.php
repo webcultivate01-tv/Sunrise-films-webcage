@@ -25,6 +25,7 @@ final class User
         public readonly string $name,
         public readonly string $email,
         public readonly ?string $phone,
+        public readonly ?string $address,
         public readonly ?string $photo,
         public readonly string $passwordHash,
         public readonly string $role,
@@ -45,6 +46,7 @@ final class User
             name:         (string) $row['name'],
             email:        (string) $row['email'],
             phone:        isset($row['phone']) ? (string) $row['phone'] ?: null : null,
+            address:      isset($row['address']) ? (string) $row['address'] ?: null : null,
             photo:        isset($row['photo']) ? (string) $row['photo'] ?: null : null,
             passwordHash: (string) $row['password_hash'],
             role:         (string) $row['role'],
@@ -96,30 +98,24 @@ final class User
         string $role,
         ?int $createdBy,
         string $status = self::STATUS_ACTIVE,
+        string $address = '',
     ): int {
         Database::statement(
-            'INSERT INTO users (name, email, phone, password_hash, role, status, created_by)
-             VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [$name, mb_strtolower($email), $phone !== '' ? $phone : null, $passwordHash, $role, $status, $createdBy],
+            'INSERT INTO users (name, email, phone, address, password_hash, role, status, created_by)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [
+                $name,
+                mb_strtolower($email),
+                $phone !== '' ? $phone : null,
+                $address !== '' ? $address : null,
+                $passwordHash,
+                $role,
+                $status,
+                $createdBy,
+            ],
         );
 
         return Database::lastInsertId();
-    }
-
-    /**
-     * Accounts a given user is responsible for, e.g. the Managers an Admin
-     * created, or the Employees assigned to a Manager.
-     *
-     * @return list<self>
-     */
-    public static function managedBy(int $ownerId, string $role): array
-    {
-        $rows = Database::select(
-            'SELECT * FROM users WHERE role = ? AND created_by = ? ORDER BY name ASC',
-            [$role, $ownerId],
-        );
-
-        return array_map(self::fromRow(...), $rows);
     }
 
     /**
@@ -127,9 +123,55 @@ final class User
      */
     public static function allOfRole(string $role): array
     {
-        $rows = Database::select('SELECT * FROM users WHERE role = ? ORDER BY name ASC', [$role]);
+        $rows = Database::select('SELECT * FROM users WHERE role = ? ORDER BY id DESC', [$role]);
 
         return array_map(self::fromRow(...), $rows);
+    }
+
+    /**
+     * The accounts an Employee Management panel may list: every user holding
+     * one of $roles, narrowed to the ones $ownerId created when the viewer is
+     * a Manager rather than an Admin (module spec s12, s15).
+     *
+     * @param  list<string> $roles
+     * @return list<self>
+     */
+    public static function inRoles(array $roles, ?int $ownerId = null, string $search = ''): array
+    {
+        if ($roles === []) {
+            return [];
+        }
+
+        $sql      = 'SELECT * FROM users WHERE role IN (' . implode(', ', array_fill(0, count($roles), '?')) . ')';
+        $bindings = $roles;
+
+        if ($ownerId !== null) {
+            $sql .= ' AND created_by = ?';
+            $bindings[] = $ownerId;
+        }
+
+        if ($search !== '') {
+            $sql .= ' AND (name LIKE ? OR email LIKE ? OR phone LIKE ?)';
+            $like = Database::like($search);
+            array_push($bindings, $like, $like, $like);
+        }
+
+        // Managers before Employees, newest-added first inside each role.
+        $rows = Database::select($sql . " ORDER BY FIELD(role, 'manager', 'employee'), id DESC", $bindings);
+
+        return array_map(self::fromRow(...), $rows);
+    }
+
+    /**
+     * How many accounts $ownerId created. Used before deleting a Manager: one
+     * that still owns Employees is deactivated instead, so their team is never
+     * silently orphaned.
+     */
+    public static function countCreatedBy(int $ownerId): int
+    {
+        $row = Database::selectOne('SELECT COUNT(*) AS total FROM users WHERE created_by = ?', [$ownerId]);
+
+        return (int) ($row['total'] ?? 0);
     }
 
     /**
@@ -159,15 +201,18 @@ final class User
         Database::statement('UPDATE users SET password_hash = ? WHERE id = ?', [$passwordHash, $id]);
     }
 
+
+
     /**
-     * A user editing their own name, email and phone (spec-adjacent: profile
-     * self-service, not account creation/management).
+     * An Admin or Manager editing an account from Employee Management
+     * (module spec s12). Role, status and password are changed through their
+     * own dedicated methods, never here.
      */
-    public static function updateDetails(int $id, string $name, string $email, string $phone): void
+    public static function updateRecord(int $id, string $name, string $email, string $phone, string $address): void
     {
         Database::statement(
-            'UPDATE users SET name = ?, email = ?, phone = ? WHERE id = ?',
-            [$name, mb_strtolower($email), $phone !== '' ? $phone : null, $id],
+            'UPDATE users SET name = ?, email = ?, phone = ?, address = ? WHERE id = ?',
+            [$name, mb_strtolower($email), $phone !== '' ? $phone : null, $address !== '' ? $address : null, $id],
         );
     }
 
@@ -185,6 +230,16 @@ final class User
     {
         Database::statement('UPDATE users SET last_login_at = NOW() WHERE id = ?', [$id]);
     }
+
+    /**
+     * Permanently remove an account. Its tokens and password resets cascade
+     * with it; accounts it created keep their rows with `created_by` nulled.
+     */
+    public static function delete(int $id): void
+    {
+        Database::statement('DELETE FROM users WHERE id = ?', [$id]);
+    }
+
 
     public function isActive(): bool
     {

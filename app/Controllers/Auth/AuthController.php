@@ -9,6 +9,7 @@ use App\Core\Controller;
 use App\Core\Request;
 use App\Core\Session;
 use App\Core\Validator;
+use App\Models\Setting;
 use App\Services\AuthService;
 use App\Services\PasswordPolicy;
 use App\Services\PasswordResetService;
@@ -207,7 +208,7 @@ final class AuthController extends Controller
 
     private function forgotPasswordUrl(string $role): ?string
     {
-        if ($role === 'admin' && Config::get('auth.admin_forgot_password') !== true) {
+        if ($role === 'admin' && !Setting::current()->adminForgotPasswordEnabled) {
             return null;
         }
 

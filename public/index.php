@@ -10,6 +10,7 @@ use App\Core\Router;
 use App\Core\Session;
 use App\Core\View;
 use App\Middleware\Authenticate;
+use App\Middleware\AuthorizeRoles;
 use App\Middleware\RedirectIfAuthenticated;
 use App\Middleware\VerifyCsrfToken;
 use App\Models\AuthToken;
@@ -44,6 +45,7 @@ $router->registerMiddleware([
     'auth'  => Authenticate::class,
     'guest' => RedirectIfAuthenticated::class,
     'csrf'  => VerifyCsrfToken::class,
+    'roles' => AuthorizeRoles::class,
 ]);
 
 /** @var callable(Router):void $routes */

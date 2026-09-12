@@ -1,8 +1,16 @@
-# Sunrise Films — Authentication System
+# Sunrise Films
 
 Role-based, token-authenticated access for **Admin**, **Manager** and **Employee**,
 built to the functional specification in `docs/` terms: separate entry points, no public
 sign-up, hierarchical account creation, and hierarchical password reset.
+
+Built so far:
+
+- **Authentication** — three entry points, token auth, forgot/reset password, account status.
+- **Customer Management** — register, view, edit, search, deactivate and delete customers.
+- **Employee Management** — create Manager and Employee accounts with role assignment,
+  scoped listing and search, edit, password reset, deactivate and delete, plus a welcome
+  email to every new account.
 
 Hand-rolled PHP MVC (no framework), MySQL, Tailwind CSS. **No Composer dependencies.**
 
@@ -16,8 +24,16 @@ Hand-rolled PHP MVC (no framework), MySQL, Tailwind CSS. **No Composer dependenc
 mysql -u root -p < database/schema.sql
 ```
 
-Creates the `sunrise_films` database and four tables: `users`, `auth_tokens`,
-`password_resets`, `login_attempts`.
+Creates the `sunrise_films` database and five tables: `users`, `customers`,
+`auth_tokens`, `password_resets`, `login_attempts`.
+
+If the database was created before Customer & Employee Management existed, bring it
+up to date instead — this adds `users.address` and the `customers` table, and is safe
+to run more than once:
+
+```bash
+php database/migrate_modules.php
+```
 
 ### 2. Environment
 
@@ -153,21 +169,56 @@ Also present: CSRF protection on every state-changing form, login/reset throttli
 ```
 app/
   Core/          Router, Request, Response, View, Database, Session, Csrf, Config, Env, Validator
-  Controllers/   HomeController, DashboardController, AccountController, ProfileController
+  Controllers/   HomeController, DashboardController, ProfileController,
+                 CustomerController, EmployeeController, ModuleController
                  Auth/AuthController        login, logout, forgot + reset password
-  Models/        User, AuthToken, PasswordReset, LoginAttempt
+  Models/        User, Customer, AuthToken, PasswordReset, LoginAttempt
   Services/      AuthService, TokenService, PasswordResetService, UserService,
-                 PasswordPolicy, RateLimiter, MailService, AuthResult
-  Middleware/    Authenticate, RedirectIfAuthenticated, VerifyCsrfToken
+                 CustomerService, PasswordPolicy, RateLimiter, MailService,
+                 WelcomeMailer, PhotoUploadService, AuthResult
+  Middleware/    Authenticate, AuthorizeRoles, RedirectIfAuthenticated, VerifyCsrfToken
   Helpers/       functions.php     view helpers (e, csrf_field, old, field_error, ...)
-  Views/         layouts, auth, accounts, partials, errors
+  Views/         layouts, auth, customers, employees, modules, partials, errors
 config/          config.php
-database/        schema.sql, seed.php
+database/        schema.sql, seed.php, migrate_modules.php
 routes/          web.php
 public/          index.php (front controller), assets/, uploads/
 storage/         logs/, mail/
-tests/           auth_check.php    acceptance-criteria smoke test
+tests/           auth_check.php     authentication acceptance criteria
+                 modules_check.php  customer + employee management acceptance criteria
 ```
+
+---
+
+## Customer & Employee Management
+
+Both modules are open to **Admin** and **Manager** and closed to **Employee**. That is
+enforced three times over: the routes are never registered on the `/employee` panel, the
+`roles:admin,manager` middleware guards the group, and `UserService` / `CustomerService`
+re-check scope on every read and write.
+
+| | Admin | Manager | Employee |
+|---|---|---|---|
+| Customers — view / add / edit / search | yes | yes | no |
+| Customers — deactivate | yes | yes | no |
+| Customers — delete outright | yes | no | no |
+| Employees — view | all users | their own employees | no |
+| Employees — add Manager | yes | no | no |
+| Employees — add Employee | yes | yes | no |
+| Employees — edit / deactivate / reset password | in scope | in scope | no |
+| Employees — delete outright | yes | no | no |
+
+Notes on the decisions the spec left open:
+
+- **Deletion policy.** Deactivating is reversible and keeps history, so both roles may do
+  it; deleting destroys the record and is Admin-only. A Manager who still owns Employee
+  accounts cannot be deleted — deactivate them instead, so their team is never orphaned.
+- **Manager scope.** A Manager sees and manages only the Employees they created. An Admin
+  is system-wide. Customers are shared: every Admin and Manager sees every customer.
+- **Passwords.** The Add User form asks for no password (module spec s7). The system
+  generates a temporary one, emails it with the welcome message, and shows it once to
+  whoever created the account in case mail delivery is not configured yet.
+- **Roles are fixed at creation.** Editing an account does not offer a role change.
 
 ---
 
@@ -175,11 +226,13 @@ tests/           auth_check.php    acceptance-criteria smoke test
 
 Every signed-in panel (`app/Views/layouts/panel.php`) renders a single sidebar shell,
 built from the authenticated user's role — there is only one authentication system in
-this project. The sidebar lists Dashboard, the role one level down (Managers for Admin,
-Employees for Manager), My Account, and the wider set of modules the product is heading
-toward (Customer Registration, Work Management, Reports, ...). Modules without a real
-controller yet (`app/Support/PanelModules.php`, routed through `ModuleController`) render
-a "not built yet" placeholder inside the same authenticated shell instead of a dead link.
+this project. The sidebar lists Dashboard, the modules that are built and routed for that
+role (Customer Management and Employee Management, for Admin and Manager), My Account,
+and the wider set of modules the product is heading toward (Work Management, Reports, ...).
+
+`app/Support/PanelModules.php` holds both lists: `BUILT` entries link to real controllers,
+while `PLACEHOLDERS` are routed through `ModuleController` and render a "not built yet"
+placeholder inside the same authenticated shell instead of a dead link.
 
 ## Notes for production
 

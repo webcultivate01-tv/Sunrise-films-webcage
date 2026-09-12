@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Core\Config;
 use App\Models\LoginAttempt;
+use App\Models\Setting;
 
 /**
  * Throttles repeated failures against the login and forgot-password forms,
@@ -20,9 +20,7 @@ final class RateLimiter
 
     public static function tooManyAttempts(string $key): bool
     {
-        $max = (int) Config::get('auth.max_attempts', 5);
-
-        return LoginAttempt::countSince($key, self::lockoutMinutes()) >= $max;
+        return LoginAttempt::countSince($key, self::lockoutMinutes()) >= Setting::current()->loginMaxAttempts;
     }
 
     public static function hit(string $key, string $ip): void
@@ -37,7 +35,7 @@ final class RateLimiter
 
     public static function lockoutMinutes(): int
     {
-        return max(1, (int) Config::get('auth.lockout_minutes', 15));
+        return Setting::current()->loginLockoutMinutes;
     }
 
     public static function lockoutMessage(): string

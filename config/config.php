@@ -52,27 +52,36 @@ return [
         'log_path'     => BASE_PATH . '/storage/mail',
     ],
 
+    // Printed on every salary settlement bill (Monthly Salary spec s8).
+    'company' => [
+        'name'    => Env::get('COMPANY_NAME', 'Sunrise Films'),
+        'address' => Env::get('COMPANY_ADDRESS', ''),
+        'phone'   => Env::get('COMPANY_PHONE', ''),
+        'email'   => Env::get('COMPANY_EMAIL', ''),
+        'website' => Env::get('COMPANY_WEBSITE', ''),
+    ],
+
     // Everything the rest of the application needs to know about a role lives
     // here, so adding or renaming a panel is a single-file change.
+    //
+    // Which roles a role may create and manage is NOT here: an Admin manages
+    // both Managers and Employees, which a single value cannot express, so
+    // that rule lives in UserService::assignableRoles() (module spec s8).
     'roles' => [
         'admin' => [
             'label'     => 'Admin',
             'login'     => '/admin',
             'dashboard' => '/admin/dashboard',
-            // The role this role is allowed to create and manage (spec s3).
-            'manages'   => 'manager',
         ],
         'manager' => [
             'label'     => 'Manager',
             'login'     => '/manager',
             'dashboard' => '/manager/dashboard',
-            'manages'   => 'employee',
         ],
         'employee' => [
             'label'     => 'Employee',
             'login'     => '/employee',
             'dashboard' => '/employee/dashboard',
-            'manages'   => null,
         ],
     ],
 ];

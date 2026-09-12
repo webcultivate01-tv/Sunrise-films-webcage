@@ -8,6 +8,7 @@ use App\Core\Config;
 use App\Core\Request;
 use App\Models\AuthToken;
 use App\Models\PasswordReset;
+use App\Models\Setting;
 use App\Models\User;
 
 /**
@@ -57,7 +58,7 @@ final class PasswordResetService
         }
 
         // Admin recovery is available only when policy allows it (spec s7).
-        if ($user->role === User::ROLE_ADMIN && Config::get('auth.admin_forgot_password') !== true) {
+        if ($user->role === User::ROLE_ADMIN && !Setting::current()->adminForgotPasswordEnabled) {
             return $neutral;
         }
 
