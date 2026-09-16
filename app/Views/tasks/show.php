@@ -1,18 +1,25 @@
 <?php
 
 use App\Models\Task;
+use App\Models\TaskDescription;
 
 /**
- * One task, read only, from the Admin/Manager side (task spec s4, s5, s6, s9).
+ * One task, read only, from the Admin/Manager side (task spec s4, s5, s6, s9),
+ * plus the running description thread an Admin/Manager keeps adding to as the
+ * photographer sends more instructions for the same piece of work.
  *
- * @var Task $task
- * @var string $baseUrl
- * @var bool $canReassign
- * @var bool $canCancel
+ * @var Task                  $task
+ * @var string                $baseUrl
+ * @var list<TaskDescription> $descriptions
+ * @var bool                  $canAddDescription
+ * @var bool                  $canReassign
+ * @var bool                  $canCancel
+ * @var array<string, string> $errors
+ * @var array<string, string> $old
  */
 $fields = [
-    ['label' => 'Project', 'value' => $task->projectName ?? 'Unknown project', 'icon' => 'folder'],
-    ['label' => 'Customer', 'value' => $task->customerName ?? 'Unknown customer', 'icon' => 'user'],
+    ['label' => 'Customer', 'value' => $task->customerName ?? 'Unknown customer', 'icon' => 'folder'],
+    ['label' => 'Photographer', 'value' => $task->photographerName ?? 'Unknown photographer', 'icon' => 'user'],
     ['label' => 'Employee', 'value' => $task->employeeName ?? 'Unknown employee', 'icon' => 'user'],
     ['label' => 'Timeline', 'value' => date('j M Y', strtotime($task->startDate)) . ' - ' . date('j M Y', strtotime($task->endDate)), 'icon' => 'clock'],
     ['label' => 'Amount', 'value' => money($task->amount), 'icon' => 'cash'],
@@ -63,7 +70,6 @@ $fieldIcons = [
                     </span>
                 <?php endif; ?>
             </div>
-            <p class="mt-2 max-w-2xl whitespace-pre-line text-sm text-slate-600"><?= e($task->description) ?></p>
         </div>
     </div>
 
@@ -88,31 +94,39 @@ $fieldIcons = [
 </div>
 
 <div class="grid gap-5 lg:grid-cols-3">
-    <section class="rounded-2xl border border-line bg-white p-6 shadow-sm sm:p-7 lg:col-span-2">
-        <div class="flex items-center gap-3">
-            <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-600">
-                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="m9 14 2 2 4-4"/>
-                </svg>
-            </span>
-            <h2 class="text-base font-semibold text-ink">Task details</h2>
-        </div>
-        <dl class="mt-6 grid gap-x-6 gap-y-6 sm:grid-cols-2">
-            <?php foreach ($fields as $field): ?>
-                <div class="flex gap-3">
-                    <span class="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-slate-50 text-slate-400">
-                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <?= $fieldIcons[$field['icon']] ?>
-                        </svg>
-                    </span>
-                    <div class="min-w-0">
-                        <dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-400"><?= e($field['label']) ?></dt>
-                        <dd class="mt-0.5 whitespace-pre-line break-words text-sm font-medium text-ink"><?= e((string) $field['value']) ?></dd>
+    <div class="space-y-5 lg:col-span-2">
+        <section class="rounded-2xl border border-line bg-white p-6 shadow-sm sm:p-7">
+            <div class="flex items-center gap-3">
+                <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-600">
+                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="m9 14 2 2 4-4"/>
+                    </svg>
+                </span>
+                <h2 class="text-base font-semibold text-ink">Task details</h2>
+            </div>
+            <dl class="mt-6 grid gap-x-6 gap-y-6 sm:grid-cols-2">
+                <?php foreach ($fields as $field): ?>
+                    <div class="flex gap-3">
+                        <span class="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-slate-50 text-slate-400">
+                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <?= $fieldIcons[$field['icon']] ?>
+                            </svg>
+                        </span>
+                        <div class="min-w-0">
+                            <dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-400"><?= e($field['label']) ?></dt>
+                            <dd class="mt-0.5 whitespace-pre-line break-words text-sm font-medium text-ink"><?= e((string) $field['value']) ?></dd>
+                        </div>
                     </div>
-                </div>
-            <?php endforeach; ?>
-        </dl>
-    </section>
+                <?php endforeach; ?>
+            </dl>
+        </section>
+
+        <?php
+        $threadAction = $canAddDescription ? $baseUrl . '/' . $task->id . '/descriptions' : null;
+        $threadClosed = !$canAddDescription;
+        require BASE_PATH . '/app/Views/partials/description-thread.php';
+        ?>
+    </div>
 
     <div class="space-y-5">
         <section class="rounded-2xl border border-line bg-white p-6 shadow-sm">

@@ -15,6 +15,7 @@ use App\Core\Database;
 final class Payment
 {
     public const TYPE_ADVANCE   = 'advance';
+    public const TYPE_FULL      = 'full';
     public const TYPE_MILESTONE = 'milestone';
     public const TYPE_PARTIAL   = 'partial';
     public const TYPE_FINAL     = 'final';
@@ -30,7 +31,23 @@ final class Payment
     /** @return list<string> */
     public static function types(): array
     {
-        return [self::TYPE_ADVANCE, self::TYPE_MILESTONE, self::TYPE_PARTIAL, self::TYPE_FINAL, self::TYPE_OTHER];
+        return [
+            self::TYPE_ADVANCE, self::TYPE_FULL, self::TYPE_MILESTONE,
+            self::TYPE_PARTIAL, self::TYPE_FINAL, self::TYPE_OTHER,
+        ];
+    }
+
+    /**
+     * The two types an Admin/Manager can pick when money arrives with the
+     * project itself (Work Management): either the photographer has paid an
+     * advance against the total, or they have settled the whole thing up
+     * front. Everything else in types() is a Payment Management concern.
+     *
+     * @return list<string>
+     */
+    public static function upfrontTypes(): array
+    {
+        return [self::TYPE_ADVANCE, self::TYPE_FULL];
     }
 
     /** @return list<string> */
@@ -40,6 +57,17 @@ final class Payment
             self::METHOD_CASH, self::METHOD_BANK_TRANSFER, self::METHOD_UPI,
             self::METHOD_CHEQUE, self::METHOD_CARD, self::METHOD_OTHER,
         ];
+    }
+
+    /**
+     * The methods offered for money collected with the project itself - the
+     * two ways cash actually changes hands at the counter.
+     *
+     * @return list<string>
+     */
+    public static function upfrontMethods(): array
+    {
+        return [self::METHOD_CASH, self::METHOD_UPI];
     }
 
     public function __construct(
@@ -53,20 +81,20 @@ final class Payment
         public readonly ?string $notes,
         public readonly ?int $receivedBy,
         public readonly ?string $createdAt,
-        /** Joined in from `projects` / `customers` / `users` for display. */
-        public readonly ?string $projectName = null,
-        public readonly ?float $projectTotalPayment = null,
-        public readonly ?int $customerId = null,
+        /** Joined in from `projects` / `photographers` / `users` for display. */
         public readonly ?string $customerName = null,
+        public readonly ?float $projectTotalPayment = null,
+        public readonly ?int $photographerId = null,
+        public readonly ?string $photographerName = null,
         public readonly ?string $receivedByName = null,
     ) {
     }
 
-    private const SELECT_WITH_JOINS = 'SELECT pay.*, proj.name AS project_name, proj.total_payment AS project_total_payment,
-               proj.customer_id AS customer_id, c.name AS customer_name, u.name AS received_by_name
+    private const SELECT_WITH_JOINS = 'SELECT pay.*, proj.customer_name AS customer_name, proj.total_payment AS project_total_payment,
+               proj.photographer_id AS photographer_id, c.name AS photographer_name, u.name AS received_by_name
           FROM payments pay
           LEFT JOIN projects proj ON proj.id = pay.project_id
-          LEFT JOIN customers c ON c.id = proj.customer_id
+          LEFT JOIN photographers c ON c.id = proj.photographer_id
           LEFT JOIN users u ON u.id = pay.received_by';
 
     /**
@@ -85,10 +113,10 @@ final class Payment
             notes:               isset($row['notes']) && $row['notes'] !== null ? (string) $row['notes'] : null,
             receivedBy:          isset($row['received_by']) && $row['received_by'] !== null ? (int) $row['received_by'] : null,
             createdAt:           isset($row['created_at']) ? (string) $row['created_at'] : null,
-            projectName:         isset($row['project_name']) ? (string) $row['project_name'] : null,
+            customerName:         isset($row['customer_name']) ? (string) $row['customer_name'] : null,
             projectTotalPayment: isset($row['project_total_payment']) ? (float) $row['project_total_payment'] : null,
-            customerId:          isset($row['customer_id']) ? (int) $row['customer_id'] : null,
-            customerName:        isset($row['customer_name']) ? (string) $row['customer_name'] : null,
+            photographerId:          isset($row['photographer_id']) ? (int) $row['photographer_id'] : null,
+            photographerName:        isset($row['photographer_name']) ? (string) $row['photographer_name'] : null,
             receivedByName:      isset($row['received_by_name']) ? (string) $row['received_by_name'] : null,
         );
     }
@@ -104,7 +132,7 @@ final class Payment
      * The Payment History (module spec s2, s5): every transaction, narrowed
      * by the search box and the available filters, sorted as requested.
      *
-     * @param array<string, string> $filters q, project_id, customer_id, type, method, start_date, end_date, sort
+     * @param array<string, string> $filters q, project_id, photographer_id, type, method, start_date, end_date, sort
      * @return list<self>
      */
     public static function all(array $filters = []): array
@@ -115,7 +143,7 @@ final class Payment
         $search = trim($filters['q'] ?? '');
 
         if ($search !== '') {
-            $sql .= ' AND (proj.name LIKE ? OR c.name LIKE ? OR pay.reference_no LIKE ?)';
+            $sql .= ' AND (proj.customer_name LIKE ? OR c.name LIKE ? OR pay.reference_no LIKE ?)';
             $like = Database::like($search);
             array_push($bindings, $like, $like, $like);
         }
@@ -127,11 +155,11 @@ final class Payment
             $bindings[] = (int) $projectId;
         }
 
-        $customerId = trim($filters['customer_id'] ?? '');
+        $photographerId = trim($filters['photographer_id'] ?? '');
 
-        if ($customerId !== '') {
-            $sql .= ' AND proj.customer_id = ?';
-            $bindings[] = (int) $customerId;
+        if ($photographerId !== '') {
+            $sql .= ' AND proj.photographer_id = ?';
+            $bindings[] = (int) $photographerId;
         }
 
         $type = trim($filters['type'] ?? '');
@@ -222,6 +250,39 @@ final class Payment
         $row = Database::selectOne('SELECT COUNT(*) AS total FROM payments WHERE project_id = ?', [$projectId]);
 
         return (int) ($row['total'] ?? 0);
+    }
+
+    /**
+     * What has been collected against each of $projectIds, in one query - a
+     * report listing hundreds of projects must not fire totalForProject()
+     * once per row.
+     *
+     * @param  list<int>        $projectIds
+     * @return array<int,float> project id => amount collected (0.0 when none)
+     */
+    public static function totalsForProjects(array $projectIds): array
+    {
+        $projectIds = array_values(array_unique($projectIds));
+
+        if ($projectIds === []) {
+            return [];
+        }
+
+        $rows = Database::select(
+            'SELECT project_id, COALESCE(SUM(amount), 0) AS total
+               FROM payments
+              WHERE project_id IN (' . implode(', ', array_fill(0, count($projectIds), '?')) . ')
+              GROUP BY project_id',
+            $projectIds,
+        );
+
+        $totals = array_fill_keys($projectIds, 0.0);
+
+        foreach ($rows as $row) {
+            $totals[(int) $row['project_id']] = (float) $row['total'];
+        }
+
+        return $totals;
     }
 
     public static function lastPaymentDateForProject(int $projectId): ?string

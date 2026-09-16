@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\Customer;
+use App\Models\Photographer;
 use App\Models\Payment;
 use App\Models\Project;
 
@@ -11,7 +11,7 @@ use App\Models\Project;
  * @var list<Payment>        $payments
  * @var string               $baseUrl
  * @var array<string, string> $filters
- * @var list<Customer>       $customers
+ * @var list<Photographer>       $photographers
  * @var Project|null         $filterProject
  */
 $hasFilters = array_filter($filters, static fn (string $value): bool => $value !== '') !== [];
@@ -46,7 +46,7 @@ $total = array_sum(array_map(static fn (Payment $p): float => $p->amount, $payme
             &middot; <?= e(money($total)) ?> total
         </p>
         <?php if ($filterProject !== null): ?>
-            <p class="mt-1 text-xs font-medium text-brand-700">Filtered to <?= e($filterProject->name) ?></p>
+            <p class="mt-1 text-xs font-medium text-brand-700">Filtered to <?= e($filterProject->customerName) ?></p>
         <?php endif; ?>
     </div>
     <a href="<?= e($baseUrl) ?>/create"
@@ -62,7 +62,7 @@ $total = array_sum(array_map(static fn (Payment $p): float => $p->amount, $payme
 
     <div class="relative min-w-0 flex-1 sm:max-w-sm" data-suggest data-suggest-url="<?= e($baseUrl) ?>/history/suggest">
         <input type="search" name="q" value="<?= e($filters['q']) ?>"
-               placeholder="Search by project, client or reference"
+               placeholder="Search by customer, photographer or reference"
                autocomplete="off"
                class="block w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-3.5 text-sm text-ink placeholder:text-slate-400 transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
                data-suggest-input>
@@ -74,11 +74,11 @@ $total = array_sum(array_map(static fn (Payment $p): float => $p->amount, $payme
             class="absolute left-0 right-0 top-full z-20 mt-1 hidden max-h-72 overflow-y-auto rounded-lg border border-line bg-white py-1 text-sm shadow-lg"></ul>
     </div>
 
-    <select name="customer_id" class="rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-ink transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200">
-        <option value="">All customers</option>
-        <?php foreach ($customers as $customer): ?>
-            <option value="<?= (int) $customer->id ?>" <?= $filters['customer_id'] === (string) $customer->id ? 'selected' : '' ?>>
-                <?= e($customer->name) ?>
+    <select name="photographer_id" class="rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-ink transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200">
+        <option value="">All photographers</option>
+        <?php foreach ($photographers as $photographer): ?>
+            <option value="<?= (int) $photographer->id ?>" <?= $filters['photographer_id'] === (string) $photographer->id ? 'selected' : '' ?>>
+                <?= e($photographer->name) ?>
             </option>
         <?php endforeach; ?>
     </select>
@@ -129,7 +129,7 @@ $total = array_sum(array_map(static fn (Payment $p): float => $p->amount, $payme
             <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                 <tr>
                     <th scope="col" class="px-5 py-3 font-medium">Date</th>
-                    <th scope="col" class="px-5 py-3 font-medium">Project / Client</th>
+                    <th scope="col" class="px-5 py-3 font-medium">Customer / Photographer</th>
                     <th scope="col" class="px-5 py-3 font-medium">Type</th>
                     <th scope="col" class="px-5 py-3 font-medium">Method</th>
                     <th scope="col" class="px-5 py-3 font-medium">Reference</th>
@@ -142,8 +142,8 @@ $total = array_sum(array_map(static fn (Payment $p): float => $p->amount, $payme
                     <tr class="hover:bg-slate-50/70">
                         <td class="px-5 py-3.5 text-slate-600"><?= e(date('j M Y', strtotime($payment->paymentDate))) ?></td>
                         <td class="px-5 py-3.5">
-                            <p class="font-medium text-ink"><?= e($payment->projectName ?? 'Unknown project') ?></p>
-                            <p class="text-xs text-slate-500"><?= e($payment->customerName ?? 'Unknown customer') ?></p>
+                            <p class="font-medium text-ink"><?= e($payment->customerName ?? 'Unknown customer') ?></p>
+                            <p class="text-xs text-slate-500"><?= e($payment->photographerName ?? 'Unknown photographer') ?></p>
                         </td>
                         <td class="px-5 py-3.5 text-slate-600"><?= e(payment_type_label($payment->paymentType)) ?></td>
                         <td class="px-5 py-3.5 text-slate-600"><?= e(payment_method_label($payment->paymentMethod)) ?></td>

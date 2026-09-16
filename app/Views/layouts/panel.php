@@ -68,6 +68,18 @@ $currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
     <script src="https://cdn.tailwindcss.com"></script>
     <?php require BASE_PATH . '/app/Views/partials/theme.php'; ?>
     <link rel="stylesheet" href="/assets/css/app.css">
+    <style>
+        @media print {
+            /* Printing a panel page prints the document on it, not the panel:
+               the sidebar, the top bar and any action bar marked print:hidden
+               drop out, and the content reclaims the full width of the sheet. */
+            #panel-sidebar,
+            #panel-topbar,
+            .print\:hidden { display: none !important; }
+            #panel-body { margin-left: 0 !important; }
+            body { background: #fff !important; }
+        }
+    </style>
 </head>
 <body class="h-full bg-canvas text-ink antialiased">
 
@@ -77,7 +89,7 @@ $currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
            class="fixed inset-0 z-30 hidden bg-black/30 peer-checked:block lg:hidden" aria-hidden="true"></label>
 
     <!-- ============ Sidebar ============ -->
-    <aside class="fixed inset-y-0 left-0 z-40 flex w-72 -translate-x-full flex-col border-r border-line bg-white text-ink transition-transform duration-200 peer-checked:translate-x-0 lg:translate-x-0 lg:shrink-0">
+    <aside id="panel-sidebar" class="fixed inset-y-0 left-0 z-40 flex w-72 -translate-x-full flex-col border-r border-line bg-white text-ink transition-transform duration-200 peer-checked:translate-x-0 lg:translate-x-0 lg:shrink-0">
         <div class="flex items-center gap-3 border-b border-line px-5 py-5">
             <a href="<?= e($base) ?>/dashboard" class="flex min-w-0 items-center gap-3">
                 <img src="/assets/img/sunrise-mark.png" alt="<?= e($appName) ?>" class="h-9 w-9 shrink-0 object-contain">
@@ -137,9 +149,9 @@ $currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
         <?php endif; ?>
     </aside>
 
-    <div class="flex min-h-full flex-1 flex-col lg:ml-72">
+    <div id="panel-body" class="flex min-h-full flex-1 flex-col lg:ml-72">
         <!-- ============ Top bar ============ -->
-        <header class="sticky top-0 z-20 flex items-center gap-4 border-b border-line bg-white px-5 py-3.5 sm:px-8">
+        <header id="panel-topbar" class="sticky top-0 z-20 flex items-center gap-4 border-b border-line bg-white px-5 py-3.5 sm:px-8">
             <label for="nav-toggle"
                    class="grid h-9 w-9 shrink-0 cursor-pointer place-items-center rounded-lg border border-slate-200 text-slate-600 lg:hidden">
                 <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -166,7 +178,7 @@ $currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
             <?php endif; ?>
         </header>
 
-        <main class="flex-1 px-5 py-8 sm:px-8">
+        <main id="panel-main" class="flex-1 px-5 py-8 sm:px-8">
             <div class="mx-auto max-w-6xl">
                 <?php foreach ($flash as $type => $message): ?>
                     <?php require BASE_PATH . '/app/Views/partials/flash.php'; ?>

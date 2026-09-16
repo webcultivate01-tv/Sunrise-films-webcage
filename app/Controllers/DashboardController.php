@@ -8,11 +8,11 @@ use App\Core\Config;
 use App\Core\Controller;
 use App\Core\Request;
 use App\Models\AuthToken;
-use App\Models\Customer;
+use App\Models\Photographer;
 use App\Models\Payment;
 use App\Models\Project;
 use App\Models\User;
-use App\Services\CustomerService;
+use App\Services\PhotographerService;
 use App\Services\PaymentService;
 use App\Services\ProjectService;
 use App\Services\SalaryService;
@@ -22,7 +22,7 @@ use App\Services\UserService;
 /**
  * The panel each role lands on after signing in (auth spec s4.5). What it
  * summarises depends on which modules the role can reach: an Employee sees
- * neither the customer nor the people figures (module spec s2, s6), and
+ * neither the photographer nor the people figures (module spec s2, s6), and
  * only an Admin/Manager - who share full reach over Work, Payment and Task
  * Management - sees the business-wide KPIs and charts.
  */
@@ -39,14 +39,14 @@ final class DashboardController extends Controller
         $canBusiness = ProjectService::canAccess($user);
 
         $data = [
-            'title'          => $user->roleLabel() . ' Panel',
-            'managesPeople'  => $manages,
-            'peopleCounts'   => $manages ? UserService::peopleCounts($user) : [],
-            'employeesUrl'   => $manages ? $base . '/employees' : null,
-            'customersUrl'   => CustomerService::canAccess($user) ? $base . '/customers' : null,
-            'customerCounts' => CustomerService::canAccess($user) ? Customer::statusCounts() : [],
-            'activeTokens'   => AuthToken::activeCountForUser($user->id),
-            'canBusiness'    => $canBusiness,
+            'title'              => $user->roleLabel() . ' Panel',
+            'managesPeople'      => $manages,
+            'peopleCounts'       => $manages ? UserService::peopleCounts($user) : [],
+            'employeesUrl'       => $manages ? $base . '/employees' : null,
+            'photographersUrl'   => PhotographerService::canAccess($user) ? $base . '/photographers' : null,
+            'photographerCounts' => PhotographerService::canAccess($user) ? Photographer::statusCounts() : [],
+            'activeTokens'       => AuthToken::activeCountForUser($user->id),
+            'canBusiness'        => $canBusiness,
         ];
 
         if ($canBusiness) {

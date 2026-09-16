@@ -44,14 +44,14 @@ use App\Models\User;
 
             <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div>
-                    <label for="field-project" class="mb-1.5 block text-sm font-medium text-slate-700">Project</label>
+                    <label for="field-project" class="mb-1.5 block text-sm font-medium text-slate-700">Project (customer)</label>
                     <select id="field-project" name="project_id" data-project-description-source
                             class="<?= input_classes($errors, 'project_id') ?>">
                         <option value="">Select a project</option>
                         <?php foreach ($projects as $project): ?>
                             <option value="<?= (int) $project->id ?>" data-description="<?= e($project->description) ?>"
                                     <?= old($old, 'project_id') === (string) $project->id ? 'selected' : '' ?>>
-                                <?= e($project->name) ?>
+                                <?= e($project->customerName) ?> - <?= e($project->photographerName ?? 'Unknown photographer') ?>
                             </option>
                         <?php endforeach; ?>
                     </select>

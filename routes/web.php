@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use App\Controllers\Auth\AuthController;
-use App\Controllers\CustomerController;
+use App\Controllers\PhotographerController;
 use App\Controllers\DashboardController;
 use App\Controllers\EmployeeController;
 use App\Controllers\HomeController;
@@ -26,7 +26,7 @@ use App\Support\PanelModules;
  * s2): /admin, /manager and /employee are built from the same definitions, so
  * the three panels cannot drift apart.
  *
- * Customer Management and Employee Management are the exception: they are
+ * Photographer Management and Employee Management are the exception: they are
  * registered only on the panels allowed to have them (module spec s2, s6), so
  * on the Employee panel those URLs do not exist at all.
  */
@@ -78,16 +78,16 @@ return static function (Router $router): void {
                     'middleware' => ['auth', $management],
                 ],
                 static function (Router $router): void {
-                    // --- Customer Management (module spec s2 - s5) ---------
-                    $router->get('/customers', [CustomerController::class, 'index']);
-                    $router->get('/customers/create', [CustomerController::class, 'create']);
-                    $router->get('/customers/suggest', [CustomerController::class, 'suggest']);
-                    $router->post('/customers', [CustomerController::class, 'store'], ['csrf']);
-                    $router->get('/customers/{id}', [CustomerController::class, 'show']);
-                    $router->get('/customers/{id}/edit', [CustomerController::class, 'edit']);
-                    $router->post('/customers/{id}', [CustomerController::class, 'update'], ['csrf']);
-                    $router->post('/customers/{id}/status', [CustomerController::class, 'updateStatus'], ['csrf']);
-                    $router->post('/customers/{id}/delete', [CustomerController::class, 'destroy'], ['csrf']);
+                    // --- Photographer Management (module spec s2 - s5) ---------
+                    $router->get('/photographers', [PhotographerController::class, 'index']);
+                    $router->get('/photographers/create', [PhotographerController::class, 'create']);
+                    $router->get('/photographers/suggest', [PhotographerController::class, 'suggest']);
+                    $router->post('/photographers', [PhotographerController::class, 'store'], ['csrf']);
+                    $router->get('/photographers/{id}', [PhotographerController::class, 'show']);
+                    $router->get('/photographers/{id}/edit', [PhotographerController::class, 'edit']);
+                    $router->post('/photographers/{id}', [PhotographerController::class, 'update'], ['csrf']);
+                    $router->post('/photographers/{id}/status', [PhotographerController::class, 'updateStatus'], ['csrf']);
+                    $router->post('/photographers/{id}/delete', [PhotographerController::class, 'destroy'], ['csrf']);
 
                     // --- Employee Management (module spec s6 - s12) --------
                     $router->get('/employees', [EmployeeController::class, 'index']);
@@ -133,6 +133,7 @@ return static function (Router $router): void {
                     $router->post('/tasks', [TaskController::class, 'store'], ['csrf']);
                     $router->get('/tasks/{id}', [TaskController::class, 'show']);
                     $router->post('/tasks/{id}/cancel', [TaskController::class, 'cancel'], ['csrf']);
+                    $router->post('/tasks/{id}/descriptions', [TaskController::class, 'addDescription'], ['csrf']);
                     $router->get('/tasks/{id}/reassign', [TaskController::class, 'reassignForm']);
                     $router->post('/tasks/{id}/reassign', [TaskController::class, 'reassign'], ['csrf']);
 
@@ -151,6 +152,7 @@ return static function (Router $router): void {
                     $router->get('/reports', [ReportController::class, 'index']);
                     $router->get('/reports/{type}/pdf', [ReportController::class, 'pdf']);
                     $router->get('/reports/{type}/excel', [ReportController::class, 'excel']);
+                    $router->get('/reports/{type}', [ReportController::class, 'show']);
                 },
             );
         }

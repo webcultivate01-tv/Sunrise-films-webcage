@@ -1,10 +1,10 @@
 -- ---------------------------------------------------------------------------
--- CUSTOMERS TABLE
--- Customer Management. Added by an admin or a manager - customers never
--- register themselves. Every admin and manager can see every customer.
+-- PHOTOGRAPHERS TABLE
+-- Photographer Management. Added by an admin or a manager - photographers
+-- never register themselves. Every admin and manager can see every one.
 -- ---------------------------------------------------------------------------
 
-CREATE TABLE IF NOT EXISTS customers (
+CREATE TABLE IF NOT EXISTS photographers (
     id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     name        VARCHAR(120) NOT NULL,
     email       VARCHAR(190) NOT NULL UNIQUE,

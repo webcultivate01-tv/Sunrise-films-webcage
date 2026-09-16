@@ -12,7 +12,7 @@ use App\Services\AuthService;
 /**
  * Restricts a route to a list of roles: `roles:admin,manager`.
  *
- * Customer Management and Employee Management are for Admins and Managers
+ * Photographer Management and Employee Management are for Admins and Managers
  * only (module spec s2, s6, s15), and this is the outermost of the three
  * layers that enforce it - the routes are not even registered on the Employee
  * panel, and the services re-check scope on every read and write. It runs

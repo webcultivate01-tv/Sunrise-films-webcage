@@ -42,7 +42,7 @@ final class UserService
     }
 
     /**
-     * Whether $actor may open Employee Management and Customer Management at
+     * Whether $actor may open Employee Management and Photographer Management at
      * all. Employees may not (module spec s2, s6).
      */
     public static function managesPeople(User $actor): bool

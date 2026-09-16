@@ -8,6 +8,7 @@ use App\Core\Exceptions\HttpException;
 use App\Core\Validator;
 use App\Models\Project;
 use App\Models\Task;
+use App\Models\TaskDescription;
 use App\Models\TaskSalaryCredit;
 use App\Models\User;
 
@@ -219,6 +220,10 @@ final class TaskService
             createdBy:   $actor->id,
         );
 
+        // Row one of the task's own thread, so every later round the
+        // photographer sends lands underneath the original brief.
+        TaskDescription::create($id, trim($input['description']), $actor->id);
+
         ProjectService::recomputeStatusFromTasks((int) $input['project_id']);
 
         return Task::findById($id) ?? throw new \RuntimeException('The task could not be created.');
@@ -331,11 +336,87 @@ final class TaskService
             parentTaskId: $task->id,
         );
 
+        // The new employee inherits the whole brief, not just its opening
+        // round - every correction sent so far still applies to the work.
+        TaskDescription::copyThread($task->id, $id);
+
         ProjectService::recomputeStatusFromTasks($task->projectId);
 
         return Task::findById($id) ?? throw new \RuntimeException('The reassigned task could not be created.');
     }
 
+    // === Admin / Manager: the description thread ===========================
+
+    /**
+     * The whole brief for a task, oldest round first (see TaskDescription).
+     *
+     * @return list<TaskDescription>
+     */
+    public static function descriptions(User $actor, Task $task): array
+    {
+        self::assertAccessManagement($actor);
+
+        return TaskDescription::forTask($task->id);
+    }
+
+    /**
+     * Whether more instructions may still be added to this task. A task that
+     * is finished or has been handed on is history - anything new belongs on
+     * the task that superseded it, not on the closed one.
+     */
+    public static function canAddDescription(Task $task): bool
+    {
+        return in_array(
+            $task->status,
+            [Task::STATUS_ASSIGNED, Task::STATUS_ACCEPTED, Task::STATUS_IN_PROGRESS],
+            true,
+        );
+    }
+
+    /**
+     * @param array<string, string> $input
+     */
+    public static function validateDescription(array $input): Validator
+    {
+        $validator = new Validator();
+        $body      = trim($input['body'] ?? '');
+
+        $validator->require('body', $body, 'Please enter the new description.');
+        $validator->maxLength('body', $body, 5000, 'A description must be 5000 characters or fewer.');
+
+        return $validator;
+    }
+
+    /**
+     * Send another round of instructions to the assigned employee. The task's
+     * opening description is never rewritten - this is appended to the thread,
+     * so the employee sees what changed as well as what it changed from.
+     *
+     * @param array<string, string> $input
+     */
+    public static function addDescription(User $actor, Task $task, array $input): Task
+    {
+        self::assertAccessManagement($actor);
+
+        if (!self::canAddDescription($task)) {
+            throw HttpException::forbidden('This task is closed - no further instructions can be sent to it.');
+        }
+
+        TaskDescription::create($task->id, trim($input['body']), $actor->id);
+
+        return self::findOrFail($actor, $task->id);
+    }
+
+    /**
+     * How many rounds each task in $tasks carries, for the task lists.
+     *
+     * @param  list<Task> $tasks
+     * @return array<int, int>
+     */
+    public static function descriptionCounts(array $tasks): array
+    {
+        return TaskDescription::countsForTasks(array_map(static fn (Task $t): int => $t->id, $tasks));
+    }
     // === Employee: My Work =================================================
 
     public static function findForEmployee(User $employee, int $id): Task
@@ -469,6 +550,19 @@ final class TaskService
         return self::findForEmployee($employee, $task->id);
     }
 
+
+    /**
+     * The brief an employee is working to, read only: every round the
+     * Admin/Manager has sent on their own task, oldest first.
+     *
+     * @return list<TaskDescription>
+     */
+    public static function descriptionsForEmployee(User $employee, Task $task): array
+    {
+        self::assertOwnedByEmployee($employee, $task);
+
+        return TaskDescription::forTask($task->id);
+    }
     private static function assertOwnedByEmployee(User $employee, Task $task): void
     {
         if ($task->employeeId !== $employee->id) {

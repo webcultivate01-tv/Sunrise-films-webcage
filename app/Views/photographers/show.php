@@ -1,22 +1,22 @@
 <?php
 
-use App\Models\Customer;
+use App\Models\Photographer;
 
 /**
- * One customer, read only, with the actions available on it (module spec s5).
+ * One photographer, read only, with the actions available on it (module spec s5).
  *
- * @var Customer $customer
+ * @var Photographer $photographer
  * @var string   $baseUrl
  * @var bool     $canDelete
  */
 $fields = [
-    ['label' => 'Customer name', 'value' => $customer->name, 'icon' => 'user'],
-    ['label' => 'Email address', 'value' => $customer->email, 'icon' => 'mail'],
-    ['label' => 'Mobile number', 'value' => $customer->phone, 'icon' => 'phone'],
-    ['label' => 'Address', 'value' => $customer->address, 'icon' => 'pin'],
-    ['label' => 'Registered by', 'value' => $customer->createdByName ?? 'Unknown', 'icon' => 'badge'],
-    ['label' => 'Registered', 'value' => pretty_date($customer->createdAt, 'Unknown'), 'icon' => 'clock'],
-    ['label' => 'Last updated', 'value' => pretty_date($customer->updatedAt, 'Never'), 'icon' => 'clock'],
+    ['label' => 'Photographer name', 'value' => $photographer->name, 'icon' => 'user'],
+    ['label' => 'Email address', 'value' => $photographer->email, 'icon' => 'mail'],
+    ['label' => 'Mobile number', 'value' => $photographer->phone, 'icon' => 'phone'],
+    ['label' => 'Address', 'value' => $photographer->address, 'icon' => 'pin'],
+    ['label' => 'Registered by', 'value' => $photographer->createdByName ?? 'Unknown', 'icon' => 'badge'],
+    ['label' => 'Registered', 'value' => pretty_date($photographer->createdAt, 'Unknown'), 'icon' => 'clock'],
+    ['label' => 'Last updated', 'value' => pretty_date($photographer->updatedAt, 'Never'), 'icon' => 'clock'],
 ];
 
 $fieldIcons = [
@@ -35,31 +35,31 @@ $fieldIcons = [
             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="m15 18-6-6 6-6"/>
             </svg>
-            Customer Management
+            Photographer Management
         </a>
         <div class="mt-4 flex items-center gap-4">
             <div class="relative shrink-0">
-                <span class="grid h-14 w-14 place-items-center rounded-full bg-brand-gradient text-base font-semibold text-white ring-4 ring-white shadow-md"><?= e($customer->initials()) ?></span>
-                <span class="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full ring-2 ring-white <?= $customer->isActive() ? 'bg-emerald-500' : 'bg-slate-400' ?>"></span>
+                <span class="grid h-14 w-14 place-items-center rounded-full bg-brand-gradient text-base font-semibold text-white ring-4 ring-white shadow-md"><?= e($photographer->initials()) ?></span>
+                <span class="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full ring-2 ring-white <?= $photographer->isActive() ? 'bg-emerald-500' : 'bg-slate-400' ?>"></span>
             </div>
             <div class="min-w-0">
-                <h1 class="truncate text-2xl font-semibold tracking-tight text-ink"><?= e($customer->name) ?></h1>
+                <h1 class="truncate text-2xl font-semibold tracking-tight text-ink"><?= e($photographer->name) ?></h1>
                 <div class="mt-1.5 flex flex-wrap items-center gap-2">
-                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset <?= status_badge($customer->status) ?>">
-                        <?= e(ucfirst($customer->status)) ?>
+                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset <?= status_badge($photographer->status) ?>">
+                        <?= e(ucfirst($photographer->status)) ?>
                     </span>
-                    <span class="text-xs text-slate-400">Customer since <?= e(pretty_date($customer->createdAt, 'Unknown')) ?></span>
+                    <span class="text-xs text-slate-400">Photographer since <?= e(pretty_date($photographer->createdAt, 'Unknown')) ?></span>
                 </div>
             </div>
         </div>
     </div>
 
-    <a href="<?= e($baseUrl) ?>/<?= (int) $customer->id ?>/edit"
+    <a href="<?= e($baseUrl) ?>/<?= (int) $photographer->id ?>/edit"
        class="inline-flex items-center gap-2 rounded-lg bg-brand-gradient px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-brand-600/20 transition hover:shadow-md hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-brand-300 focus:ring-offset-2">
         <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
         </svg>
-        Edit customer
+        Edit photographer
     </a>
 </div>
 
@@ -71,7 +71,7 @@ $fieldIcons = [
                     <circle cx="12" cy="8" r="3.2"/><path d="M5 20v-1a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v1"/>
                 </svg>
             </span>
-            <h2 class="text-base font-semibold text-ink">Customer details</h2>
+            <h2 class="text-base font-semibold text-ink">Photographer details</h2>
         </div>
         <dl class="mt-6 grid gap-x-6 gap-y-6 sm:grid-cols-2">
             <?php foreach ($fields as $field): ?>
@@ -101,20 +101,20 @@ $fieldIcons = [
                 <h2 class="text-base font-semibold text-ink">Record status</h2>
             </div>
             <p class="mt-3 text-sm text-slate-500">
-                <?= $customer->isActive()
-                    ? 'This customer is active and available for new work.'
-                    : 'This customer is inactive. Their record is kept for history.' ?>
+                <?= $photographer->isActive()
+                    ? 'This photographer is active and available for new work.'
+                    : 'This photographer is inactive. Their record is kept for history.' ?>
             </p>
 
-            <form method="post" action="<?= e($baseUrl) ?>/<?= (int) $customer->id ?>/status" class="mt-5">
+            <form method="post" action="<?= e($baseUrl) ?>/<?= (int) $photographer->id ?>/status" class="mt-5">
                 <?= csrf_field() ?>
                 <input type="hidden" name="status"
-                       value="<?= $customer->isActive() ? Customer::STATUS_INACTIVE : Customer::STATUS_ACTIVE ?>">
+                       value="<?= $photographer->isActive() ? Photographer::STATUS_INACTIVE : Photographer::STATUS_ACTIVE ?>">
                 <button type="submit"
-                        class="w-full rounded-lg border px-4 py-2.5 text-sm font-semibold transition <?= $customer->isActive()
+                        class="w-full rounded-lg border px-4 py-2.5 text-sm font-semibold transition <?= $photographer->isActive()
                             ? 'border-amber-200 text-amber-700 hover:bg-amber-50'
                             : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50' ?>">
-                    <?= $customer->isActive() ? 'Deactivate customer' : 'Activate customer' ?>
+                    <?= $photographer->isActive() ? 'Deactivate photographer' : 'Activate photographer' ?>
                 </button>
             </form>
         </section>
@@ -132,12 +132,12 @@ $fieldIcons = [
                 <p class="mt-3 text-sm text-slate-600">
                     Deleting removes this record for good. Deactivating instead keeps their history and can be undone.
                 </p>
-                <form method="post" action="<?= e($baseUrl) ?>/<?= (int) $customer->id ?>/delete" class="mt-5"
-                      onsubmit="return confirm('Permanently delete <?= e(addslashes($customer->name)) ?>? This cannot be undone.');">
+                <form method="post" action="<?= e($baseUrl) ?>/<?= (int) $photographer->id ?>/delete" class="mt-5"
+                      onsubmit="return confirm('Permanently delete <?= e(addslashes($photographer->name)) ?>? This cannot be undone.');">
                     <?= csrf_field() ?>
                     <button type="submit"
                             class="w-full rounded-lg border border-red-300 bg-white px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-100">
-                        Delete customer
+                        Delete photographer
                     </button>
                 </form>
             </section>

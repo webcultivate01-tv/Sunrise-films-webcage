@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\Customer;
+use App\Models\Photographer;
 use App\Models\Payment;
 use App\Models\Project;
 use App\Models\Setting;
@@ -12,32 +12,20 @@ use App\Models\Setting;
  *
  * @var Payment       $payment
  * @var Project|null  $project
- * @var Customer|null $customer
+ * @var Photographer|null $photographer
  * @var string       $reference
  * @var float        $collected
  * @var string       $backUrl
  * @var string       $downloadUrl
+ * @var ?string      $whatsappUrl
+ * @var ?string      $whatsappName
  */
 $company     = Setting::current();
 $total       = $project?->totalPayment ?? $payment->projectTotalPayment ?? 0.0;
 $outstanding = max(0.0, $total - $collected);
+$backLabel   = 'Back';
 ?>
-<div class="mb-6 flex flex-wrap items-center justify-between gap-4 print:hidden">
-    <a href="<?= e($backUrl) ?>" class="text-sm font-medium text-slate-500 underline-offset-2 hover:underline">&larr; Back</a>
-    <div class="flex items-center gap-2">
-        <button type="button" onclick="window.print()"
-                class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
-            Print
-        </button>
-        <a href="<?= e($downloadUrl) ?>"
-           class="inline-flex items-center gap-2 rounded-lg bg-brand-gradient px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-110">
-            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/>
-            </svg>
-            Download PDF
-        </a>
-    </div>
-</div>
+<?php require BASE_PATH . '/app/Views/partials/bill-actions.php'; ?>
 
 <div class="invoice-card mx-auto max-w-2xl overflow-hidden rounded-2xl border-2 border-ink/20 bg-white shadow-sm">
     <!-- ============ Header banner ============ -->
@@ -55,19 +43,19 @@ $outstanding = max(0.0, $total - $collected);
         </div>
     </div>
 
-    <!-- ============ Customer / Project ============ -->
+    <!-- ============ Photographer / Project ============ -->
     <div class="grid gap-6 border-b border-line px-8 py-6 sm:grid-cols-2">
         <div>
-            <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Customer</p>
-            <p class="mt-2 text-sm font-semibold text-ink"><?= e($payment->customerName ?? 'Unknown customer') ?></p>
-            <?php if ($customer !== null): ?>
-                <p class="mt-1 text-sm text-slate-600"><?= e($customer->phone) ?></p>
-                <p class="text-sm text-slate-600"><?= e($customer->email) ?></p>
+            <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Photographer</p>
+            <p class="mt-2 text-sm font-semibold text-ink"><?= e($payment->photographerName ?? 'Unknown photographer') ?></p>
+            <?php if ($photographer !== null): ?>
+                <p class="mt-1 text-sm text-slate-600"><?= e($photographer->phone) ?></p>
+                <p class="text-sm text-slate-600"><?= e($photographer->email) ?></p>
             <?php endif; ?>
         </div>
         <div>
-            <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Project</p>
-            <p class="mt-2 text-sm font-semibold text-ink"><?= e($payment->projectName ?? 'Unknown project') ?></p>
+            <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Customer</p>
+            <p class="mt-2 text-sm font-semibold text-ink"><?= e($payment->customerName ?? 'Unknown customer') ?></p>
         </div>
     </div>
 
@@ -119,8 +107,14 @@ $outstanding = max(0.0, $total - $collected);
     </div>
 </div>
 
-<script>
-    window.addEventListener('load', function () {
-        window.print();
-    });
-</script>
+<style>
+    /* The receipt prints on its own - the panel layout already drops the
+       sidebar, top bar and action bar, and these rules give the card the
+       whole sheet. Printing only ever happens when the admin asks for it
+       with the Print button; opening the bill never starts a print. */
+    @media print {
+        @page { margin: 0; }
+        #panel-main { padding: 12mm !important; }
+        .invoice-card { box-shadow: none !important; margin: 0 auto !important; }
+    }
+</style>

@@ -6,22 +6,22 @@ namespace App\Services;
 
 use App\Core\Exceptions\HttpException;
 use App\Core\Validator;
-use App\Models\Customer;
+use App\Models\Photographer;
 use App\Models\Project;
 use App\Models\User;
 
 /**
- * Customer Management (module spec s2 - s5, s13).
+ * Photographer Management (module spec s2 - s5, s13).
  *
- * Admins and Managers both have full reach over the customer list: module spec
+ * Admins and Managers both have full reach over the photographer list: module spec
  * s13 grants View, Add, Edit and Search to each of them without qualification,
  * so - unlike Employee Management - there is no per-manager ownership filter.
  * The one place the two roles differ is removal: a Manager may deactivate a
- * customer, only an Admin may delete the record outright.
+ * photographer, only an Admin may delete the record outright.
  *
  * Employees have no access to this module at all (module spec s2).
  */
-final class CustomerService
+final class PhotographerService
 {
     /**
      * Module spec s2: Admin and Manager only.
@@ -32,9 +32,9 @@ final class CustomerService
     }
 
     /**
-     * Module spec s13: "Delete/Deactivate Customer - Admin: yes, Manager:
+     * Module spec s13: "Delete/Deactivate Photographer - Admin: yes, Manager:
      * according to permission". A deactivation is reversible and keeps the
-     * history attached to the customer, so both roles may do it; an outright
+     * history attached to the photographer, so both roles may do it; an outright
      * delete destroys that history and is reserved for an Admin.
      */
     public static function canDelete(User $actor): bool
@@ -45,33 +45,33 @@ final class CustomerService
     public static function assertAccess(User $actor): void
     {
         if (!self::canAccess($actor)) {
-            throw HttpException::forbidden('You are not authorized to access Customer Management.');
+            throw HttpException::forbidden('You are not authorized to access Photographer Management.');
         }
     }
 
     /**
-     * The customer list, narrowed by the search box and the status filter
+     * The photographer list, narrowed by the search box and the status filter
      * (module spec s5, s16).
      *
-     * @return list<Customer>
+     * @return list<Photographer>
      */
     public static function list(User $actor, string $search = '', string $status = ''): array
     {
         self::assertAccess($actor);
 
-        if (!in_array($status, [Customer::STATUS_ACTIVE, Customer::STATUS_INACTIVE], true)) {
+        if (!in_array($status, [Photographer::STATUS_ACTIVE, Photographer::STATUS_INACTIVE], true)) {
             $status = '';
         }
 
-        return Customer::all($search, $status);
+        return Photographer::all($search, $status);
     }
 
     /**
-     * Up to 8 customers matching the search box, for the live suggestion
+     * Up to 8 photographers matching the search box, for the live suggestion
      * dropdown - across every status, so a typed name still surfaces an
-     * inactive customer.
+     * inactive photographer.
      *
-     * @return list<Customer>
+     * @return list<Photographer>
      */
     public static function suggest(User $actor, string $search): array
     {
@@ -81,27 +81,27 @@ final class CustomerService
             return [];
         }
 
-        return array_slice(Customer::all($search), 0, 8);
+        return array_slice(Photographer::all($search), 0, 8);
     }
 
     /**
-     * Load one customer, or 404 if there is no such record.
+     * Load one photographer, or 404 if there is no such record.
      */
-    public static function findOrFail(User $actor, int $id): Customer
+    public static function findOrFail(User $actor, int $id): Photographer
     {
         self::assertAccess($actor);
 
-        return Customer::findById($id) ?? throw HttpException::notFound('That customer could not be found.');
+        return Photographer::findById($id) ?? throw HttpException::notFound('That photographer could not be found.');
     }
 
     /**
-     * Validate the Customer Registration form (module spec s4, s14). Every
+     * Validate the Photographer Registration form (module spec s4, s14). Every
      * field is required; pass $existing when editing so the record keeps its
      * own email address.
      *
      * @param array<string, string> $input
      */
-    public static function validate(array $input, ?Customer $existing = null): Validator
+    public static function validate(array $input, ?Photographer $existing = null): Validator
     {
         $validator = new Validator();
 
@@ -110,7 +110,7 @@ final class CustomerService
         $phone   = trim($input['phone'] ?? '');
         $address = trim($input['address'] ?? '');
 
-        $validator->require('name', $name, 'Please enter the customer name.');
+        $validator->require('name', $name, 'Please enter the photographer name.');
         $validator->maxLength('name', $name, 120, 'Name must be 120 characters or fewer.');
 
         $validator->require('email', $email, 'Please enter an email address.');
@@ -127,17 +127,17 @@ final class CustomerService
             $validator->in(
                 'status',
                 trim($input['status']),
-                [Customer::STATUS_ACTIVE, Customer::STATUS_INACTIVE],
-                'That customer status is not recognised.',
+                [Photographer::STATUS_ACTIVE, Photographer::STATUS_INACTIVE],
+                'That photographer status is not recognised.',
             );
         }
 
-        // Module spec s14: one customer record per email address.
+        // Module spec s14: one photographer record per email address.
         if ($email !== ''
             && !array_key_exists('email', $validator->errors())
-            && Customer::emailExists($email, $existing?->id)
+            && Photographer::emailExists($email, $existing?->id)
         ) {
-            $validator->add('email', 'A customer with this email address already exists.');
+            $validator->add('email', 'A photographer with this email address already exists.');
         }
 
         return $validator;
@@ -146,82 +146,82 @@ final class CustomerService
     /**
      * @param array<string, string> $input
      */
-    public static function create(User $actor, array $input): Customer
+    public static function create(User $actor, array $input): Photographer
     {
         self::assertAccess($actor);
 
-        $status = $input['status'] ?? Customer::STATUS_ACTIVE;
+        $status = $input['status'] ?? Photographer::STATUS_ACTIVE;
 
-        $id = Customer::create(
+        $id = Photographer::create(
             name:      trim($input['name']),
             email:     trim($input['email']),
             phone:     trim($input['phone']),
             address:   trim($input['address']),
             createdBy: $actor->id,
-            status:    in_array($status, [Customer::STATUS_ACTIVE, Customer::STATUS_INACTIVE], true)
+            status:    in_array($status, [Photographer::STATUS_ACTIVE, Photographer::STATUS_INACTIVE], true)
                 ? $status
-                : Customer::STATUS_ACTIVE,
+                : Photographer::STATUS_ACTIVE,
         );
 
-        return Customer::findById($id)
-            ?? throw new \RuntimeException('The customer could not be created.');
+        return Photographer::findById($id)
+            ?? throw new \RuntimeException('The photographer could not be created.');
     }
 
     /**
      * @param array<string, string> $input
      */
-    public static function update(User $actor, Customer $customer, array $input): Customer
+    public static function update(User $actor, Photographer $photographer, array $input): Photographer
     {
         self::assertAccess($actor);
 
-        Customer::update(
-            $customer->id,
+        Photographer::update(
+            $photographer->id,
             trim($input['name']),
             trim($input['email']),
             trim($input['phone']),
             trim($input['address']),
         );
 
-        return Customer::findById($customer->id)
-            ?? throw new \RuntimeException('The customer could not be found after updating.');
+        return Photographer::findById($photographer->id)
+            ?? throw new \RuntimeException('The photographer could not be found after updating.');
     }
 
     /**
-     * Deactivate or reactivate a customer. Available to both roles.
+     * Deactivate or reactivate a photographer. Available to both roles.
      */
-    public static function setStatus(User $actor, Customer $customer, string $status): void
+    public static function setStatus(User $actor, Photographer $photographer, string $status): void
     {
         self::assertAccess($actor);
 
-        if (!in_array($status, [Customer::STATUS_ACTIVE, Customer::STATUS_INACTIVE], true)) {
-            throw HttpException::forbidden('That customer status is not recognised.');
+        if (!in_array($status, [Photographer::STATUS_ACTIVE, Photographer::STATUS_INACTIVE], true)) {
+            throw HttpException::forbidden('That photographer status is not recognised.');
         }
 
-        Customer::updateStatus($customer->id, $status);
+        Photographer::updateStatus($photographer->id, $status);
     }
 
     /**
      * Remove the record for good. Admin only - see canDelete().
      */
-    public static function delete(User $actor, Customer $customer): void
+    public static function delete(User $actor, Photographer $photographer): void
     {
         self::assertAccess($actor);
 
         if (!self::canDelete($actor)) {
             throw HttpException::forbidden(
-                'You are not authorized to delete customers. Deactivate the customer instead.',
+                'You are not authorized to delete photographers. Deactivate the photographer instead.',
             );
         }
 
-        // Work Management projects point at this customer by ID; deleting the
+        // Work Management projects point at this photographer by ID; deleting the
         // record out from under them would either fail on the foreign key or
         // orphan their history, so removal is refused while any exist.
-        if (Project::existsForCustomer($customer->id)) {
+        if (Project::existsForPhotographer($photographer->id)) {
             throw HttpException::forbidden(
-                'This customer has projects on record and cannot be deleted. Deactivate the customer instead.',
+                'This photographer has projects on record and cannot be deleted. Deactivate the photographer instead.',
             );
         }
 
-        Customer::delete($customer->id);
+        Photographer::delete($photographer->id);
     }
 }

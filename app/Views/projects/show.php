@@ -13,7 +13,7 @@ use App\Models\Project;
  * @var string  $paymentsBaseUrl
  */
 $fields = [
-    ['label' => 'Customer', 'value' => $project->customerName ?? 'Unknown customer', 'icon' => 'user'],
+    ['label' => 'Photographer', 'value' => $project->photographerName ?? 'Unknown photographer', 'icon' => 'user'],
     ['label' => 'Receivable folder', 'value' => $project->folderName, 'icon' => 'folder'],
     ['label' => 'Deadline', 'value' => date('j M Y', strtotime($project->deadline)), 'icon' => 'clock'],
     ['label' => 'Total payment', 'value' => money($project->totalPayment), 'icon' => 'cash'],
@@ -39,7 +39,7 @@ $fieldIcons = [
             Work Management
         </a>
         <div class="mt-4">
-            <h1 class="truncate text-2xl font-semibold tracking-tight text-ink"><?= e($project->name) ?></h1>
+            <h1 class="truncate text-2xl font-semibold tracking-tight text-ink"><?= e($project->customerName) ?></h1>
             <div class="mt-1.5 flex flex-wrap items-center gap-2">
                 <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset <?= project_status_badge($project->status) ?>">
                     <?= e(project_status_label($project->status)) ?>
@@ -132,7 +132,7 @@ $fieldIcons = [
                     Deleting removes this record for good. Marking it cancelled instead keeps its history.
                 </p>
                 <form method="post" action="<?= e($baseUrl) ?>/<?= (int) $project->id ?>/delete" class="mt-5"
-                      onsubmit="return confirm('Permanently delete <?= e(addslashes($project->name)) ?>? This cannot be undone.');">
+                      onsubmit="return confirm('Permanently delete <?= e(addslashes($project->customerName)) ?>? This cannot be undone.');">
                     <?= csrf_field() ?>
                     <button type="submit"
                             class="w-full rounded-lg border border-red-300 bg-white px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-100">

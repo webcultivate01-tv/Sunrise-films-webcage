@@ -6,7 +6,7 @@ declare(strict_types=1);
  * End-to-end check of the Payment Management acceptance criteria, run
  * against the real database.
  *
- * It creates a throwaway Manager, Customer and Project, exercises the role
+ * It creates a throwaway Manager, Photographer and Project, exercises the role
  * rules, validation and recomputed totals on payments, then deletes
  * everything it created.
  *
@@ -14,11 +14,11 @@ declare(strict_types=1);
  */
 
 use App\Core\Database;
-use App\Models\Customer;
+use App\Models\Photographer;
 use App\Models\Payment;
 use App\Models\Project;
 use App\Models\User;
-use App\Services\CustomerService;
+use App\Services\PhotographerService;
 use App\Services\PasswordPolicy;
 use App\Services\PaymentService;
 use App\Services\ProjectService;
@@ -63,12 +63,12 @@ function refused(callable $callback): bool
 $suffix        = bin2hex(random_bytes(4));
 $managerEmail  = 'pm-manager-' . $suffix . '@sunrisefilms.test';
 $employeeEmail = 'pm-employee-' . $suffix . '@sunrisefilms.test';
-$customerEmail = 'pm-customer-' . $suffix . '@sunrisefilms.test';
+$photographerEmail = 'pm-photographer-' . $suffix . '@sunrisefilms.test';
 
 /** @var list<int> $userIds */
 $userIds = [];
-/** @var list<int> $customerIds */
-$customerIds = [];
+/** @var list<int> $photographerIds */
+$photographerIds = [];
 /** @var list<int> $projectIds */
 $projectIds = [];
 /** @var list<int> $paymentIds */
@@ -109,21 +109,21 @@ try {
     ]);
     $userIds[] = $employee->id;
 
-    $customer = CustomerService::create($admin, [
-        'name'    => 'Payment Mgmt Customer',
-        'email'   => $customerEmail,
+    $photographer = PhotographerService::create($admin, [
+        'name'    => 'Payment Mgmt Photographer',
+        'email'   => $photographerEmail,
         'phone'   => '+91 99999 66666',
         'address' => '5 Brigade Road, Bengaluru 560001',
     ]);
-    $customerIds[] = $customer->id;
+    $photographerIds[] = $photographer->id;
 
     $project = ProjectService::create($admin, [
-        'customer_id'   => (string) $customer->id,
-        'name'          => 'Payment Mgmt Project',
-        'description'   => 'A project to exercise Payment Management against.',
-        'folder_name'   => 'PMCustomer_Project_2026',
-        'deadline'      => '2026-12-31',
-        'total_payment' => '100000',
+        'photographer_id' => (string) $photographer->id,
+        'customer_name'   => 'Payment Mgmt Customer',
+        'description'     => 'A project to exercise Payment Management against.',
+        'folder_name'     => 'PMPhotographer_Project_2026',
+        'deadline'        => '2026-12-31',
+        'total_payment'   => '100000',
     ]);
     $projectIds[] = $project->id;
 
@@ -177,6 +177,16 @@ try {
         'project_id' => (string) $project->id, 'amount' => '999999', 'payment_type' => 'advance', 'payment_method' => 'cash',
         'payment_date' => '2026-09-12',
     ])->errors()));
+
+    check('a full payment that leaves a balance is refused', array_key_exists('amount', PaymentService::validate([
+        'project_id' => (string) $project->id, 'amount' => '40000', 'payment_type' => 'full', 'payment_method' => 'cash',
+        'payment_date' => '2026-09-12',
+    ])->errors()));
+
+    check('a full payment that clears the balance is accepted', PaymentService::validate([
+        'project_id' => (string) $project->id, 'amount' => '100000', 'payment_type' => 'full', 'payment_method' => 'cash',
+        'payment_date' => '2026-09-12',
+    ])->passes());
 
     // -----------------------------------------------------------------------
     echo PHP_EOL . 'Payment Management - record and recompute' . PHP_EOL;
@@ -284,8 +294,8 @@ try {
         Database::statement('DELETE FROM projects WHERE id = ?', [$id]);
     }
 
-    foreach ($customerIds as $id) {
-        Database::statement('DELETE FROM customers WHERE id = ?', [$id]);
+    foreach ($photographerIds as $id) {
+        Database::statement('DELETE FROM photographers WHERE id = ?', [$id]);
     }
 
     foreach (array_reverse($userIds) as $id) {

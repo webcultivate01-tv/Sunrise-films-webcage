@@ -8,7 +8,7 @@ use App\Core\Config;
 use App\Core\Controller;
 use App\Core\Request;
 use App\Core\Response;
-use App\Models\Customer;
+use App\Models\Photographer;
 use App\Models\Payment;
 use App\Models\Project;
 use App\Models\User;
@@ -26,26 +26,26 @@ final class PaymentController extends Controller
 {
     /**
      * GET /{panel}/payments - the Payment Dashboard and Project Payment
-     * Overview (module spec s1, s4, s9), search, status and customer filter.
+     * Overview (module spec s1, s4, s9), search, status and photographer filter.
      *
      * @param array<string, string> $params
      */
     public function index(Request $request, array $params): never
     {
-        $user       = $this->user();
-        $search     = $request->string('q');
-        $status     = $request->string('status');
-        $customerId = $request->string('customer_id');
+        $user           = $this->user();
+        $search         = $request->string('q');
+        $status         = $request->string('status');
+        $photographerId = $request->string('photographer_id');
 
         $this->view('payments.index', [
-            'title'      => 'Payment Management',
-            'baseUrl'    => $this->baseUrl($user),
-            'summary'    => PaymentService::dashboardSummary($user),
-            'rows'       => PaymentService::projectOverview($user, $search, $status, $customerId !== '' ? (int) $customerId : null),
-            'search'     => $search,
-            'status'     => $status,
-            'customerId' => $customerId,
-            'customers'  => Customer::all(),
+            'title'          => 'Payment Management',
+            'baseUrl'        => $this->baseUrl($user),
+            'summary'        => PaymentService::dashboardSummary($user),
+            'rows'           => PaymentService::projectOverview($user, $search, $status, $photographerId !== '' ? (int) $photographerId : null),
+            'search'         => $search,
+            'status'         => $status,
+            'photographerId' => $photographerId,
+            'photographers'  => Photographer::all(),
         ], 'panel');
     }
 
@@ -64,8 +64,8 @@ final class PaymentController extends Controller
         $results = array_map(
             static fn (array $row): array => [
                 'id'   => $row['project']->id,
-                'name' => $row['project']->name,
-                'sub'  => $row['project']->customerName ?? 'Unknown customer',
+                'name' => $row['project']->customerName,
+                'sub'  => $row['project']->photographerName ?? 'Unknown photographer',
                 'url'  => $base . '/history?project_id=' . $row['project']->id,
             ],
             PaymentService::suggestProjects($user, $search),
@@ -84,7 +84,7 @@ final class PaymentController extends Controller
     {
         $user    = $this->user();
         $filters = $request->only([
-            'q', 'project_id', 'customer_id', 'type', 'method', 'start_date', 'end_date', 'sort',
+            'q', 'project_id', 'photographer_id', 'type', 'method', 'start_date', 'end_date', 'sort',
         ]);
 
         $filterProject = $filters['project_id'] !== '' ? Project::findById((int) $filters['project_id']) : null;
@@ -94,7 +94,7 @@ final class PaymentController extends Controller
             'baseUrl'       => $this->baseUrl($user),
             'payments'      => PaymentService::history($user, $filters),
             'filters'       => $filters,
-            'customers'     => Customer::all(),
+            'photographers' => Photographer::all(),
             'filterProject' => $filterProject,
         ], 'panel');
     }
@@ -114,8 +114,8 @@ final class PaymentController extends Controller
         $results = array_map(
             static fn (Payment $payment): array => [
                 'id'   => $payment->id,
-                'name' => $payment->projectName ?? 'Unknown project',
-                'sub'  => money($payment->amount) . ' - ' . ($payment->customerName ?? 'Unknown customer'),
+                'name' => $payment->customerName ?? 'Unknown customer',
+                'sub'  => money($payment->amount) . ' - ' . ($payment->photographerName ?? 'Unknown photographer'),
                 'url'  => $base . '/' . $payment->id,
             ],
             PaymentService::suggestHistory($user, $search),
@@ -139,12 +139,12 @@ final class PaymentController extends Controller
         $projectId = $request->string('project_id');
 
         $this->view('payments.create', [
-            'title'           => 'Record Payment',
-            'baseUrl'         => $this->baseUrl($user),
-            'projects'        => Project::all(),
-            'customers'       => Customer::all(),
-            'projectSummary'  => PaymentService::projectPaymentIndex($user),
-            'preselectedId'   => $projectId !== '' ? (int) $projectId : null,
+            'title'          => 'Record Payment',
+            'baseUrl'        => $this->baseUrl($user),
+            'projects'       => Project::all(),
+            'photographers'  => Photographer::all(),
+            'projectSummary' => PaymentService::projectPaymentIndex($user),
+            'preselectedId'  => $projectId !== '' ? (int) $projectId : null,
         ], 'panel');
     }
 
@@ -207,14 +207,14 @@ final class PaymentController extends Controller
         }
 
         $this->view('payments.show', [
-            'title'            => 'Payment ' . ($payment->referenceNo ?? '#' . $payment->id),
-            'baseUrl'          => $this->baseUrl($user),
-            'payment'          => $payment,
-            'project'          => $project,
-            'projectUrl'       => $project !== null ? $this->projectsBaseUrl($user) . '/' . $project->id : null,
-            'previousPayment'  => $previousPayment,
-            'collectedAfter'   => $collectedBefore + $payment->amount,
-            'remainingAfter'   => $project !== null ? max(0.0, $project->totalPayment - ($collectedBefore + $payment->amount)) : 0.0,
+            'title'           => 'Payment ' . ($payment->referenceNo ?? '#' . $payment->id),
+            'baseUrl'         => $this->baseUrl($user),
+            'payment'         => $payment,
+            'project'         => $project,
+            'projectUrl'      => $project !== null ? $this->projectsBaseUrl($user) . '/' . $project->id : null,
+            'previousPayment' => $previousPayment,
+            'collectedAfter'  => $collectedBefore + $payment->amount,
+            'remainingAfter'  => $project !== null ? max(0.0, $project->totalPayment - ($collectedBefore + $payment->amount)) : 0.0,
         ], 'panel');
     }
 
@@ -230,19 +230,27 @@ final class PaymentController extends Controller
         $user    = $this->user();
         $payment = PaymentService::findOrFail($user, (int) $params['id']);
         $project = Project::findById($payment->projectId);
-        $customer = $payment->customerId !== null ? Customer::findById($payment->customerId) : null;
+        $photographer = $payment->photographerId !== null ? Photographer::findById($payment->photographerId) : null;
+
+        $collected = Payment::totalForProject($payment->projectId);
+        $total     = $project?->totalPayment ?? $payment->projectTotalPayment ?? 0.0;
 
         $this->view('payments.bill', [
-            'title'       => 'Bill ' . PaymentService::billReference($payment),
-            'baseUrl'     => $this->baseUrl($user),
-            'payment'     => $payment,
-            'project'     => $project,
-            'customer'    => $customer,
-            'reference'   => PaymentService::billReference($payment),
-            'collected'   => Payment::totalForProject($payment->projectId),
-            'backUrl'     => $this->baseUrl($user) . '/' . $payment->id,
-            'downloadUrl' => $this->baseUrl($user) . '/bills/' . $payment->id . '/download',
-        ], 'invoice');
+            'title'        => 'Bill ' . PaymentService::billReference($payment),
+            'baseUrl'      => $this->baseUrl($user),
+            'payment'      => $payment,
+            'project'      => $project,
+            'photographer' => $photographer,
+            'reference'    => PaymentService::billReference($payment),
+            'collected'    => $collected,
+            'backUrl'      => $this->baseUrl($user) . '/' . $payment->id,
+            'downloadUrl'  => $this->baseUrl($user) . '/bills/' . $payment->id . '/download',
+            'whatsappUrl'  => whatsapp_url(
+                $photographer?->phone,
+                PaymentService::billWhatsAppMessage($payment, $total, $collected),
+            ),
+            'whatsappName' => $photographer?->name ?? $payment->photographerName,
+        ], 'panel');
     }
 
     /**

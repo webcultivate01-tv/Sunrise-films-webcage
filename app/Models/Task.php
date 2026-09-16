@@ -70,8 +70,8 @@ final class Task
         public readonly ?string $createdAt,
         public readonly ?string $updatedAt,
         /** Joined in for listings and detail pages. */
-        public readonly ?string $projectName = null,
         public readonly ?string $customerName = null,
+        public readonly ?string $photographerName = null,
         public readonly ?string $employeeName = null,
         public readonly ?string $createdByName = null,
     ) {
@@ -101,18 +101,18 @@ final class Task
             createdBy:     isset($row['created_by']) ? (int) $row['created_by'] : null,
             createdAt:     isset($row['created_at']) ? (string) $row['created_at'] : null,
             updatedAt:     isset($row['updated_at']) ? (string) $row['updated_at'] : null,
-            projectName:   isset($row['project_name']) ? (string) $row['project_name'] : null,
-            customerName:  isset($row['customer_name']) ? (string) $row['customer_name'] : null,
+            customerName:   isset($row['customer_name']) ? (string) $row['customer_name'] : null,
+            photographerName:  isset($row['photographer_name']) ? (string) $row['photographer_name'] : null,
             employeeName:  isset($row['employee_name']) ? (string) $row['employee_name'] : null,
             createdByName: isset($row['created_by_name']) ? (string) $row['created_by_name'] : null,
         );
     }
 
-    private const SELECT = 'SELECT t.*, p.name AS project_name, c.name AS customer_name,
+    private const SELECT = 'SELECT t.*, p.customer_name AS customer_name, c.name AS photographer_name,
                                     e.name AS employee_name, u.name AS created_by_name
                                FROM tasks t
                                LEFT JOIN projects p ON p.id = t.project_id
-                               LEFT JOIN customers c ON c.id = p.customer_id
+                               LEFT JOIN photographers c ON c.id = p.photographer_id
                                LEFT JOIN users e ON e.id = t.employee_id
                                LEFT JOIN users u ON u.id = t.created_by';
 
@@ -149,7 +149,7 @@ final class Task
         $search = $filters['q'] ?? '';
 
         if ($search !== '') {
-            $sql .= ' AND (t.title LIKE ? OR p.name LIKE ? OR e.name LIKE ?)';
+            $sql .= ' AND (t.title LIKE ? OR p.customer_name LIKE ? OR e.name LIKE ?)';
             $like = Database::like($search);
             array_push($bindings, $like, $like, $like);
         }
@@ -204,7 +204,7 @@ final class Task
         $search = $filters['q'] ?? '';
 
         if ($search !== '') {
-            $sql .= ' AND (t.title LIKE ? OR p.name LIKE ?)';
+            $sql .= ' AND (t.title LIKE ? OR p.customer_name LIKE ?)';
             $like = Database::like($search);
             array_push($bindings, $like, $like);
         }
@@ -317,6 +317,43 @@ final class Task
 
         foreach (Database::select($sql, [$projectId, self::STATUS_REASSIGNED]) as $row) {
             $counts[(string) $row['status']] = (int) $row['total'];
+        }
+
+        return $counts;
+    }
+
+    /**
+     * How many live tasks each of $projectIds has been broken into, in one
+     * query - what a report needs when it lists many projects at once and
+     * must not run statusCountsForProject() per row.
+     *
+     * 'reassigned' rows are excluded for the same reason as above: each is
+     * superseded by the task it was reassigned into.
+     *
+     * @param  list<int>      $projectIds
+     * @return array<int,int> project id => task count (0 when none)
+     */
+    public static function countsForProjects(array $projectIds): array
+    {
+        $projectIds = array_values(array_unique($projectIds));
+
+        if ($projectIds === []) {
+            return [];
+        }
+
+        $rows = Database::select(
+            'SELECT project_id, COUNT(*) AS total
+               FROM tasks
+              WHERE status != ?
+                AND project_id IN (' . implode(', ', array_fill(0, count($projectIds), '?')) . ')
+              GROUP BY project_id',
+            [self::STATUS_REASSIGNED, ...$projectIds],
+        );
+
+        $counts = array_fill_keys($projectIds, 0);
+
+        foreach ($rows as $row) {
+            $counts[(int) $row['project_id']] = (int) $row['total'];
         }
 
         return $counts;

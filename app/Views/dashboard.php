@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\Customer;
+use App\Models\Photographer;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
@@ -15,8 +15,8 @@ use App\Services\PaymentService;
  * @var bool                    $managesPeople
  * @var array<string, int>      $peopleCounts       role => total, in scope
  * @var string|null             $employeesUrl
- * @var string|null             $customersUrl
- * @var array<string, int>      $customerCounts
+ * @var string|null             $photographersUrl
+ * @var array<string, int>      $photographerCounts
  * @var int                     $activeTokens
  * @var bool                    $canBusiness
  * @var array<string, mixed>    $paymentSummary
@@ -46,7 +46,7 @@ $base = (string) config('roles.' . $authUser->role . '.login');
 
     <?php
     $activeProjects  = ($projectStatusCounts[Project::STATUS_PENDING] ?? 0) + ($projectStatusCounts[Project::STATUS_IN_PROGRESS] ?? 0);
-    $activeCustomers = $customerCounts[Customer::STATUS_ACTIVE] ?? 0;
+    $activePhotographers = $photographerCounts[Photographer::STATUS_ACTIVE] ?? 0;
     $overdueAmount   = (float) ($paymentSummary['overduePayments'] ?? 0.0);
 
     $kpis = [
@@ -72,9 +72,9 @@ $base = (string) config('roles.' . $authUser->role . '.login');
             'icon'   => '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
         ],
         [
-            'label'  => 'Active Customers',
-            'value'  => (string) $activeCustomers,
-            'note'   => ($customerCounts[Customer::STATUS_INACTIVE] ?? 0) . ' inactive',
+            'label'  => 'Active Photographers',
+            'value'  => (string) $activePhotographers,
+            'note'   => ($photographerCounts[Photographer::STATUS_INACTIVE] ?? 0) . ' inactive',
             'accent' => 'sky',
             'icon'   => '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/>',
         ],
@@ -485,20 +485,20 @@ $base = (string) config('roles.' . $authUser->role . '.login');
 
 <p class="mb-3 mt-8 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Quick Actions</p>
 <div class="grid gap-4 lg:grid-cols-2">
-    <?php if ($customersUrl !== null): ?>
+    <?php if ($photographersUrl !== null): ?>
         <section class="rounded-xl border border-line bg-white p-6">
-            <h2 class="text-base font-semibold text-ink">Customer Management</h2>
+            <h2 class="text-base font-semibold text-ink">Photographer Management</h2>
             <p class="mt-1.5 text-sm text-slate-500">
-                Register new customers, keep their contact details current and search the customer list.
+                Register new photographers, keep their contact details current and search the photographer list.
             </p>
             <div class="mt-5 flex flex-wrap gap-3">
-                <a href="<?= e($customersUrl) ?>"
+                <a href="<?= e($photographersUrl) ?>"
                    class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700">
-                    View customers
+                    View photographers
                 </a>
-                <a href="<?= e($customersUrl) ?>/create"
+                <a href="<?= e($photographersUrl) ?>/create"
                    class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
-                    Add customer
+                    Add photographer
                 </a>
             </div>
         </section>
@@ -529,7 +529,7 @@ $base = (string) config('roles.' . $authUser->role . '.login');
         <section class="rounded-xl border border-line bg-white p-6">
             <h2 class="text-base font-semibold text-ink">Work &amp; Payments</h2>
             <p class="mt-1.5 text-sm text-slate-500">
-                Track project progress, assign tasks and record customer payments as they come in.
+                Track project progress, assign tasks and record photographer payments as they come in.
             </p>
             <div class="mt-5 flex flex-wrap gap-3">
                 <a href="<?= e($projectsUrl) ?>"

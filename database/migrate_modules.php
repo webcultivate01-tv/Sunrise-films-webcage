@@ -5,8 +5,9 @@ declare(strict_types=1);
 /**
  * Brings an existing install up to date with every module added after the
  * original schema: the `address`/`temporary_address` columns on `users`, and
- * the `customers`, `projects`, `tasks`, `task_salary_credits`,
- * `salary_settlements`, `payments` and `settings` tables.
+ * the `photographers`, `projects`, `tasks`, `task_descriptions`,
+ * `task_salary_credits`, `salary_settlements`, `payments` and `settings`
+ * tables.
  *
  * Safe to run more than once.
  *
@@ -55,17 +56,17 @@ if ($column !== null) {
     echo 'Added `temporary_address` to `users`.' . PHP_EOL;
 }
 
-// --- customers -------------------------------------------------------------
+// --- photographers -------------------------------------------------------------
 $table = Database::selectOne(
     "SELECT TABLE_NAME FROM information_schema.TABLES
-     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'customers'",
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'photographers'",
 );
 
 if ($table !== null) {
-    echo '`customers` already exists - skipped.' . PHP_EOL;
+    echo '`photographers` already exists - skipped.' . PHP_EOL;
 } else {
     Database::statement(
-        "CREATE TABLE `customers` (
+        "CREATE TABLE `photographers` (
             `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
             `name`        VARCHAR(120) NOT NULL,
             `email`       VARCHAR(190) NOT NULL,
@@ -76,15 +77,15 @@ if ($table !== null) {
             `created_at`  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             `updated_at`  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (`id`),
-            UNIQUE KEY `uq_customers_email` (`email`),
-            KEY `idx_customers_status` (`status`),
-            KEY `idx_customers_created_by` (`created_by`),
-            CONSTRAINT `fk_customers_created_by`
+            UNIQUE KEY `uq_photographers_email` (`email`),
+            KEY `idx_photographers_status` (`status`),
+            KEY `idx_photographers_created_by` (`created_by`),
+            CONSTRAINT `fk_photographers_created_by`
                 FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
     );
 
-    echo 'Created `customers`.' . PHP_EOL;
+    echo 'Created `photographers`.' . PHP_EOL;
 }
 
 // --- projects ----------------------------------------------------------------
@@ -99,8 +100,8 @@ if ($table !== null) {
     Database::statement(
         "CREATE TABLE `projects` (
             `id`               INT UNSIGNED NOT NULL AUTO_INCREMENT,
-            `customer_id`      INT UNSIGNED NOT NULL,
-            `name`             VARCHAR(150) NOT NULL,
+            `photographer_id`  INT UNSIGNED NOT NULL,
+            `customer_name`    VARCHAR(150) NOT NULL,
             `description`      TEXT NOT NULL,
             `folder_name`      VARCHAR(190) NOT NULL,
             `deadline`         DATE NOT NULL,
@@ -110,11 +111,12 @@ if ($table !== null) {
             `created_at`       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             `updated_at`       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (`id`),
-            KEY `idx_projects_customer` (`customer_id`),
+            KEY `idx_projects_photographer` (`photographer_id`),
+            KEY `idx_projects_customer_name` (`customer_name`),
             KEY `idx_projects_status` (`status`),
             KEY `idx_projects_created_by` (`created_by`),
-            CONSTRAINT `fk_projects_customer`
-                FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`) ON DELETE RESTRICT,
+            CONSTRAINT `fk_projects_photographer`
+                FOREIGN KEY (`photographer_id`) REFERENCES `photographers` (`id`) ON DELETE RESTRICT,
             CONSTRAINT `fk_projects_created_by`
                 FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
@@ -186,6 +188,42 @@ if ($table !== null) {
     );
 
     echo 'Created `tasks`.' . PHP_EOL;
+}
+
+// --- task_descriptions -------------------------------------------------------
+$table = Database::selectOne(
+    "SELECT TABLE_NAME FROM information_schema.TABLES
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'task_descriptions'",
+);
+
+if ($table !== null) {
+    echo '`task_descriptions` already exists - skipped.' . PHP_EOL;
+} else {
+    Database::statement(
+        "CREATE TABLE `task_descriptions` (
+            `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `task_id`    INT UNSIGNED NOT NULL,
+            `body`       TEXT NOT NULL,
+            `created_by` INT UNSIGNED NULL DEFAULT NULL,
+            `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`),
+            KEY `idx_task_descriptions_task` (`task_id`),
+            KEY `idx_task_descriptions_created_by` (`created_by`),
+            CONSTRAINT `fk_task_descriptions_task`
+                FOREIGN KEY (`task_id`) REFERENCES `tasks` (`id`) ON DELETE CASCADE,
+            CONSTRAINT `fk_task_descriptions_created_by`
+                FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+    );
+
+    // Every task that already exists gets its opening description as row one
+    // of its thread, so the task pages have something to render from day one.
+    Database::statement(
+        'INSERT INTO task_descriptions (task_id, body, created_by, created_at)
+         SELECT id, description, created_by, created_at FROM tasks ORDER BY id ASC',
+    );
+
+    echo 'Created `task_descriptions`, seeded from the description on every existing task.' . PHP_EOL;
 }
 
 // --- task_salary_credits ------------------------------------------------------
@@ -270,13 +308,32 @@ $table = Database::selectOne(
 
 if ($table !== null) {
     echo '`payments` already exists - skipped.' . PHP_EOL;
+
+    // --- payments.payment_type: the 'full' option ---------------------------
+    // Added with Work Management's "Advance payment / Full payment" choice, so
+    // an install created before that still needs the enum widened.
+    $column = Database::selectOne(
+        "SELECT COLUMN_TYPE FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'payments' AND COLUMN_NAME = 'payment_type'",
+    );
+
+    if ($column !== null && !str_contains((string) $column['COLUMN_TYPE'], "'full'")) {
+        Database::statement(
+            "ALTER TABLE payments MODIFY COLUMN `payment_type`
+             ENUM('advance','full','milestone','partial','final','other') NOT NULL DEFAULT 'other'",
+        );
+
+        echo "Added the 'full' option to `payments`.`payment_type`." . PHP_EOL;
+    } else {
+        echo "`payments`.`payment_type` already offers 'full' - skipped." . PHP_EOL;
+    }
 } else {
     Database::statement(
         "CREATE TABLE `payments` (
             `id`              INT UNSIGNED NOT NULL AUTO_INCREMENT,
             `project_id`      INT UNSIGNED NOT NULL,
             `amount`          DECIMAL(12,2) NOT NULL,
-            `payment_type`    ENUM('advance','milestone','partial','final','other') NOT NULL DEFAULT 'other',
+            `payment_type`    ENUM('advance','full','milestone','partial','final','other') NOT NULL DEFAULT 'other',
             `payment_method`  ENUM('cash','bank_transfer','upi','cheque','card','other') NOT NULL DEFAULT 'other',
             `reference_no`    VARCHAR(60) NULL DEFAULT NULL,
             `payment_date`    DATE NOT NULL,

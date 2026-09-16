@@ -3,10 +3,10 @@
 declare(strict_types=1);
 
 /**
- * End-to-end check of the Customer & Employee Management acceptance criteria
+ * End-to-end check of the Photographer & Employee Management acceptance criteria
  * (module spec s17), run against the real database.
  *
- * It creates a throwaway Manager, Employee and Customer, exercises the role
+ * It creates a throwaway Manager, Employee and Photographer, exercises the role
  * rules, the scope rules, validation, search and the welcome email, then
  * deletes everything it created.
  *
@@ -15,9 +15,9 @@ declare(strict_types=1);
 
 use App\Core\Config;
 use App\Core\Database;
-use App\Models\Customer;
+use App\Models\Photographer;
 use App\Models\User;
-use App\Services\CustomerService;
+use App\Services\PhotographerService;
 use App\Services\PasswordPolicy;
 use App\Services\UserService;
 use App\Services\WelcomeMailer;
@@ -62,13 +62,13 @@ $suffix        = bin2hex(random_bytes(4));
 $managerEmail  = 'mod-manager-' . $suffix . '@sunrisefilms.test';
 $employeeEmail = 'mod-employee-' . $suffix . '@sunrisefilms.test';
 $strayEmail    = 'mod-stray-' . $suffix . '@sunrisefilms.test';
-$customerEmail = 'mod-customer-' . $suffix . '@sunrisefilms.test';
+$photographerEmail = 'mod-photographer-' . $suffix . '@sunrisefilms.test';
 $adminEmpEmail = 'mod-adminemp-' . $suffix . '@sunrisefilms.test';
 
 /** @var list<int> $userIds */
 $userIds = [];
-/** @var list<int> $customerIds */
-$customerIds = [];
+/** @var list<int> $photographerIds */
+$photographerIds = [];
 
 try {
     Database::connection();
@@ -303,46 +303,46 @@ try {
     }
 
     // =======================================================================
-    echo PHP_EOL . "Customer Management - access (s2, s13, s17)" . PHP_EOL;
+    echo PHP_EOL . "Photographer Management - access (s2, s13, s17)" . PHP_EOL;
 
-    check('admin can access customer management', CustomerService::canAccess($admin));
-    check('manager can access customer management', CustomerService::canAccess($manager));
-    check('employee cannot access customer management', !CustomerService::canAccess($employee));
-    check('employee is refused the customer list',
-        refused(static fn () => CustomerService::list($employee)));
+    check('admin can access photographer management', PhotographerService::canAccess($admin));
+    check('manager can access photographer management', PhotographerService::canAccess($manager));
+    check('employee cannot access photographer management', !PhotographerService::canAccess($employee));
+    check('employee is refused the photographer list',
+        refused(static fn () => PhotographerService::list($employee)));
 
     // -----------------------------------------------------------------------
-    echo PHP_EOL . "Customer Management - add and capture (s3, s4, s17)" . PHP_EOL;
+    echo PHP_EOL . "Photographer Management - add and capture (s3, s4, s17)" . PHP_EOL;
 
-    $customer = CustomerService::create($admin, [
-        'name'    => 'Module Customer',
-        'email'   => $customerEmail,
+    $photographer = PhotographerService::create($admin, [
+        'name'    => 'Module Photographer',
+        'email'   => $photographerEmail,
         'phone'   => '+91 99999 88888',
         'address' => '5 Lavelle Road, Bengaluru 560001',
     ]);
-    $customerIds[] = $customer->id;
+    $photographerIds[] = $photographer->id;
 
-    check('admin can add customers', $customer->id > 0);
+    check('admin can add photographers', $photographer->id > 0);
 
-    $stored = Customer::findById($customer->id);
+    $stored = Photographer::findById($photographer->id);
 
-    check('customer name is stored', $stored?->name === 'Module Customer');
-    check('customer email is stored', $stored?->email === mb_strtolower($customerEmail));
-    check('customer mobile number is stored', $stored?->phone === '+91 99999 88888');
-    check('customer address is stored', $stored?->address === '5 Lavelle Road, Bengaluru 560001');
+    check('photographer name is stored', $stored?->name === 'Module Photographer');
+    check('photographer email is stored', $stored?->email === mb_strtolower($photographerEmail));
+    check('photographer mobile number is stored', $stored?->phone === '+91 99999 88888');
+    check('photographer address is stored', $stored?->address === '5 Lavelle Road, Bengaluru 560001');
     check('the registering user is recorded', $stored?->createdBy === $admin->id);
 
-    $managerCustomer = CustomerService::create($manager, [
-        'name'    => 'Module Manager Customer',
-        'email'   => 'mod-mcustomer-' . $suffix . '@sunrisefilms.test',
+    $managerPhotographer = PhotographerService::create($manager, [
+        'name'    => 'Module Manager Photographer',
+        'email'   => 'mod-mphotographer-' . $suffix . '@sunrisefilms.test',
         'phone'   => '+91 99999 77777',
         'address' => '8 Infantry Road, Bengaluru 560001',
     ]);
-    $customerIds[] = $managerCustomer->id;
+    $photographerIds[] = $managerPhotographer->id;
 
-    check('manager can add customers', $managerCustomer->createdBy === $manager->id);
+    check('manager can add photographers', $managerPhotographer->createdBy === $manager->id);
 
-    check('employee cannot add customers', refused(static fn () => CustomerService::create($employee, [
+    check('employee cannot add photographers', refused(static fn () => PhotographerService::create($employee, [
         'name'    => 'Should Not Exist',
         'email'   => 'nope3-' . $suffix . '@sunrisefilms.test',
         'phone'   => '+91 99999 66666',
@@ -350,79 +350,79 @@ try {
     ])));
 
     // -----------------------------------------------------------------------
-    echo PHP_EOL . "Customer Management - validation (s14)" . PHP_EOL;
+    echo PHP_EOL . "Photographer Management - validation (s14)" . PHP_EOL;
 
-    $blank = CustomerService::validate(['name' => '', 'email' => '', 'phone' => '', 'address' => '']);
+    $blank = PhotographerService::validate(['name' => '', 'email' => '', 'phone' => '', 'address' => '']);
 
-    check('every customer field is required',
+    check('every photographer field is required',
         count(array_intersect(['name', 'email', 'phone', 'address'], array_keys($blank->errors()))) === 4);
 
-    check('a duplicate customer email is refused',
-        array_key_exists('email', CustomerService::validate([
-            'name' => 'Duplicate', 'email' => $customerEmail,
+    check('a duplicate photographer email is refused',
+        array_key_exists('email', PhotographerService::validate([
+            'name' => 'Duplicate', 'email' => $photographerEmail,
             'phone' => '9999988888', 'address' => 'Somewhere',
         ])->errors()));
 
-    check('editing a customer keeps its own email address',
-        !array_key_exists('email', CustomerService::validate([
-            'name' => 'Module Customer', 'email' => $customerEmail,
+    check('editing a photographer keeps its own email address',
+        !array_key_exists('email', PhotographerService::validate([
+            'name' => 'Module Photographer', 'email' => $photographerEmail,
             'phone' => '9999988888', 'address' => 'Somewhere',
-        ], $customer)->errors()));
+        ], $photographer)->errors()));
 
     // -----------------------------------------------------------------------
-    echo PHP_EOL . "Customer Management - view, search, edit, remove (s5, s13)" . PHP_EOL;
+    echo PHP_EOL . "Photographer Management - view, search, edit, remove (s5, s13)" . PHP_EOL;
 
-    check('a manager sees the customers an admin registered',
-        in_array($customer->id, array_map(
-            static fn (Customer $c): int => $c->id,
-            CustomerService::list($manager),
+    check('a manager sees the photographers an admin registered',
+        in_array($photographer->id, array_map(
+            static fn (Photographer $c): int => $c->id,
+            PhotographerService::list($manager),
         ), true));
 
-    $hits = CustomerService::list($admin, 'Module Manager Customer');
-    check('customers can be searched by name', count($hits) === 1 && $hits[0]->id === $managerCustomer->id);
+    $hits = PhotographerService::list($admin, 'Module Manager Photographer');
+    check('photographers can be searched by name', count($hits) === 1 && $hits[0]->id === $managerPhotographer->id);
 
-    $hits = CustomerService::list($admin, 'Lavelle');
-    check('customers can be searched by address', count($hits) === 1 && $hits[0]->id === $customer->id);
+    $hits = PhotographerService::list($admin, 'Lavelle');
+    check('photographers can be searched by address', count($hits) === 1 && $hits[0]->id === $photographer->id);
 
-    $updated = CustomerService::update($manager, $customer, [
-        'name'    => 'Module Customer Renamed',
-        'email'   => $customerEmail,
+    $updated = PhotographerService::update($manager, $photographer, [
+        'name'    => 'Module Photographer Renamed',
+        'email'   => $photographerEmail,
         'phone'   => '+91 91111 22222',
         'address' => '6 Lavelle Road, Bengaluru 560001',
     ]);
 
-    check('manager can edit a customer', $updated->name === 'Module Customer Renamed'
+    check('manager can edit a photographer', $updated->name === 'Module Photographer Renamed'
         && $updated->phone === '+91 91111 22222');
 
-    CustomerService::setStatus($manager, $customer, Customer::STATUS_INACTIVE);
-    check('manager can deactivate a customer',
-        Customer::findById($customer->id)?->status === Customer::STATUS_INACTIVE);
+    PhotographerService::setStatus($manager, $photographer, Photographer::STATUS_INACTIVE);
+    check('manager can deactivate a photographer',
+        Photographer::findById($photographer->id)?->status === Photographer::STATUS_INACTIVE);
 
     check('the status filter narrows the list',
         array_map(
-            static fn (Customer $c): string => $c->status,
-            CustomerService::list($admin, 'Module ', Customer::STATUS_INACTIVE),
-        ) === [Customer::STATUS_INACTIVE]);
+            static fn (Photographer $c): string => $c->status,
+            PhotographerService::list($admin, 'Module ', Photographer::STATUS_INACTIVE),
+        ) === [Photographer::STATUS_INACTIVE]);
 
-    CustomerService::setStatus($admin, $customer, Customer::STATUS_ACTIVE);
-    check('a deactivated customer can be reactivated',
-        Customer::findById($customer->id)?->status === Customer::STATUS_ACTIVE);
+    PhotographerService::setStatus($admin, $photographer, Photographer::STATUS_ACTIVE);
+    check('a deactivated photographer can be reactivated',
+        Photographer::findById($photographer->id)?->status === Photographer::STATUS_ACTIVE);
 
-    check('a manager cannot delete a customer outright',
-        refused(static fn () => CustomerService::delete($manager, $customer)));
+    check('a manager cannot delete a photographer outright',
+        refused(static fn () => PhotographerService::delete($manager, $photographer)));
 
-    CustomerService::delete($admin, $managerCustomer);
-    check('admin can delete a customer', Customer::findById($managerCustomer->id) === null);
-    $customerIds = array_values(array_filter(
-        $customerIds,
-        static fn (int $id): bool => $id !== $managerCustomer->id,
+    PhotographerService::delete($admin, $managerPhotographer);
+    check('admin can delete a photographer', Photographer::findById($managerPhotographer->id) === null);
+    $photographerIds = array_values(array_filter(
+        $photographerIds,
+        static fn (int $id): bool => $id !== $managerPhotographer->id,
     ));
 } finally {
     // ---------------------------------------------------------------------
     // Clean up. auth_tokens and password_resets cascade with the user rows;
     // employees are removed before the manager that owns them.
-    foreach ($customerIds as $id) {
-        Database::statement('DELETE FROM customers WHERE id = ?', [$id]);
+    foreach ($photographerIds as $id) {
+        Database::statement('DELETE FROM photographers WHERE id = ?', [$id]);
     }
 
     foreach (array_reverse($userIds) as $id) {

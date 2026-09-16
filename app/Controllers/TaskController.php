@@ -34,14 +34,14 @@ final class TaskController extends Controller
         $filters = $request->only(['q', 'project_id', 'employee_id', 'priority', 'status', 'start_date', 'end_date']);
 
         $this->view('tasks.index', [
-            'title'      => 'Task Management',
-            'baseUrl'    => $this->baseUrl($user),
-            'tasks'      => TaskService::list($user, $filters),
-            'exited'     => TaskService::exitedWork($user),
-            'filters'    => $filters,
-            'projects'   => Project::all(),
-            'employees'  => TaskService::assignableEmployees($user),
-            'counts'     => TaskService::statusCounts($user),
+            'title'     => 'Task Management',
+            'baseUrl'   => $this->baseUrl($user),
+            'tasks'     => TaskService::list($user, $filters),
+            'exited'    => TaskService::exitedWork($user),
+            'filters'   => $filters,
+            'projects'  => Project::all(),
+            'employees' => TaskService::assignableEmployees($user),
+            'counts'    => TaskService::statusCounts($user),
         ], 'panel');
     }
 
@@ -109,7 +109,7 @@ final class TaskController extends Controller
             static fn (Task $task): array => [
                 'id'   => $task->id,
                 'name' => $task->title,
-                'sub'  => ($task->projectName ?? 'Unknown project') . ' · ' . ($task->employeeName ?? 'Unassigned'),
+                'sub'  => ($task->customerName ?? 'Unknown customer') . ' · ' . ($task->employeeName ?? 'Unassigned'),
                 'url'  => $base . '/' . $task->id,
             ],
             TaskService::suggest($user, $search),
@@ -129,12 +129,50 @@ final class TaskController extends Controller
         $task = TaskService::findOrFail($user, (int) $params['id']);
 
         $this->view('tasks.show', [
-            'title'        => $task->title,
-            'baseUrl'      => $this->baseUrl($user),
-            'task'         => $task,
-            'canReassign'  => TaskService::canReassign($task),
-            'canCancel'    => TaskService::canCancel($task),
+            'title'             => $task->title,
+            'baseUrl'           => $this->baseUrl($user),
+            'task'              => $task,
+            'descriptions'      => TaskService::descriptions($user, $task),
+            'canAddDescription' => TaskService::canAddDescription($task),
+            'canReassign'       => TaskService::canReassign($task),
+            'canCancel'         => TaskService::canCancel($task),
         ], 'panel');
+    }
+
+    /**
+     * POST /{panel}/tasks/{id}/descriptions - send another round of
+     * instructions to the assigned employee.
+     *
+     * The photographer keeps sending notes for work that is already out with
+     * an employee, so an Admin/Manager appends here rather than editing the
+     * original brief: the employee sees the whole history in order.
+     *
+     * @param array<string, string> $params
+     */
+    public function addDescription(Request $request, array $params): never
+    {
+        $user = $this->user();
+        $task = TaskService::findOrFail($user, (int) $params['id']);
+        $url  = $this->baseUrl($user) . '/' . $task->id;
+
+        if (!TaskService::canAddDescription($task)) {
+            $this->redirectWithFlash($url, 'error', 'This task is closed - no further instructions can be sent to it.');
+        }
+
+        $input     = $request->only(['body']);
+        $validator = TaskService::validateDescription($input);
+
+        if ($validator->fails()) {
+            $this->redirectWithErrors($url, $validator->errors(), $input);
+        }
+
+        TaskService::addDescription($user, $task, $input);
+
+        $this->redirectWithFlash(
+            $url,
+            'success',
+            sprintf('The new description has been sent to %s.', $task->employeeName ?? 'the employee'),
+        );
     }
 
     /**

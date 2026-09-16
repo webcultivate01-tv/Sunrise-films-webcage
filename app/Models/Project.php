@@ -7,8 +7,8 @@ namespace App\Models;
 use App\Core\Database;
 
 /**
- * A piece of work for a customer (Work Management). Every project belongs to
- * exactly one customer and is registered by an Admin or a Manager.
+ * A piece of work for a photographer (Work Management). Every project belongs to
+ * exactly one photographer and is registered by an Admin or a Manager.
  */
 final class Project
 {
@@ -25,8 +25,8 @@ final class Project
 
     public function __construct(
         public readonly int $id,
-        public readonly int $customerId,
-        public readonly string $name,
+        public readonly int $photographerId,
+        public readonly string $customerName,
         public readonly string $description,
         public readonly string $folderName,
         public readonly string $deadline,
@@ -35,8 +35,8 @@ final class Project
         public readonly ?int $createdBy,
         public readonly ?string $createdAt,
         public readonly ?string $updatedAt,
-        /** Joined in from `customers` for the list and detail pages. */
-        public readonly ?string $customerName = null,
+        /** Joined in from `photographers` for the list and detail pages. */
+        public readonly ?string $photographerName = null,
         /** Name of the user who registered this project, when joined in. */
         public readonly ?string $createdByName = null,
     ) {
@@ -49,8 +49,8 @@ final class Project
     {
         return new self(
             id:             (int) $row['id'],
-            customerId:     (int) $row['customer_id'],
-            name:           (string) $row['name'],
+            photographerId:     (int) $row['photographer_id'],
+            customerName:   (string) $row['customer_name'],
             description:    (string) $row['description'],
             folderName:     (string) $row['folder_name'],
             deadline:       (string) $row['deadline'],
@@ -59,7 +59,7 @@ final class Project
             createdBy:      isset($row['created_by']) ? (int) $row['created_by'] : null,
             createdAt:      isset($row['created_at']) ? (string) $row['created_at'] : null,
             updatedAt:      isset($row['updated_at']) ? (string) $row['updated_at'] : null,
-            customerName:   isset($row['customer_name']) ? (string) $row['customer_name'] : null,
+            photographerName:   isset($row['photographer_name']) ? (string) $row['photographer_name'] : null,
             createdByName:  isset($row['created_by_name']) ? (string) $row['created_by_name'] : null,
         );
     }
@@ -67,9 +67,9 @@ final class Project
     public static function findById(int $id): ?self
     {
         $row = Database::selectOne(
-            'SELECT p.*, c.name AS customer_name, u.name AS created_by_name
+            'SELECT p.*, c.name AS photographer_name, u.name AS created_by_name
                FROM projects p
-               LEFT JOIN customers c ON c.id = p.customer_id
+               LEFT JOIN photographers c ON c.id = p.photographer_id
                LEFT JOIN users u ON u.id = p.created_by
               WHERE p.id = ?
               LIMIT 1',
@@ -81,7 +81,7 @@ final class Project
 
     /**
      * The project list, narrowed by the search box, the status filter and a
-     * specific customer, sorted as requested. Every Admin and Manager sees
+     * specific photographer, sorted as requested. Every Admin and Manager sees
      * every project, so there is no ownership filter here.
      *
      * Deadline (soonest first) is the default sort - it is what lets an
@@ -93,17 +93,17 @@ final class Project
      * @param string $sort '' (deadline soonest, default) | deadline_desc | newest | oldest
      * @return list<self>
      */
-    public static function all(string $search = '', string $status = '', ?int $customerId = null, string $sort = '', string $startDate = '', string $endDate = ''): array
+    public static function all(string $search = '', string $status = '', ?int $photographerId = null, string $sort = '', string $startDate = '', string $endDate = ''): array
     {
-        $sql      = 'SELECT p.*, c.name AS customer_name, u.name AS created_by_name
+        $sql      = 'SELECT p.*, c.name AS photographer_name, u.name AS created_by_name
                        FROM projects p
-                       LEFT JOIN customers c ON c.id = p.customer_id
+                       LEFT JOIN photographers c ON c.id = p.photographer_id
                        LEFT JOIN users u ON u.id = p.created_by
                       WHERE 1 = 1';
         $bindings = [];
 
         if ($search !== '') {
-            $sql .= ' AND (p.name LIKE ? OR p.folder_name LIKE ? OR c.name LIKE ?)';
+            $sql .= ' AND (p.customer_name LIKE ? OR p.folder_name LIKE ? OR c.name LIKE ?)';
             $like = Database::like($search);
             array_push($bindings, $like, $like, $like);
         }
@@ -113,9 +113,9 @@ final class Project
             $bindings[] = $status;
         }
 
-        if ($customerId !== null) {
-            $sql .= ' AND p.customer_id = ?';
-            $bindings[] = $customerId;
+        if ($photographerId !== null) {
+            $sql .= ' AND p.photographer_id = ?';
+            $bindings[] = $photographerId;
         }
 
         if ($startDate !== '') {
@@ -141,8 +141,8 @@ final class Project
     }
 
     public static function create(
-        int $customerId,
-        string $name,
+        int $photographerId,
+        string $customerName,
         string $description,
         string $folderName,
         string $deadline,
@@ -152,9 +152,9 @@ final class Project
     ): int {
         Database::statement(
             'INSERT INTO projects
-                (customer_id, name, description, folder_name, deadline, total_payment, status, created_by)
+                (photographer_id, customer_name, description, folder_name, deadline, total_payment, status, created_by)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-            [$customerId, $name, $description, $folderName, $deadline, $totalPayment, $status, $createdBy],
+            [$photographerId, $customerName, $description, $folderName, $deadline, $totalPayment, $status, $createdBy],
         );
 
         return Database::lastInsertId();
@@ -162,8 +162,8 @@ final class Project
 
     public static function update(
         int $id,
-        int $customerId,
-        string $name,
+        int $photographerId,
+        string $customerName,
         string $description,
         string $folderName,
         string $deadline,
@@ -171,10 +171,10 @@ final class Project
     ): void {
         Database::statement(
             'UPDATE projects
-                SET customer_id = ?, name = ?, description = ?, folder_name = ?,
+                SET photographer_id = ?, customer_name = ?, description = ?, folder_name = ?,
                     deadline = ?, total_payment = ?
               WHERE id = ?',
-            [$customerId, $name, $description, $folderName, $deadline, $totalPayment, $id],
+            [$photographerId, $customerName, $description, $folderName, $deadline, $totalPayment, $id],
         );
     }
 
@@ -189,14 +189,14 @@ final class Project
     }
 
     /**
-     * Whether $customerId has any project on record, so a customer with
+     * Whether $photographerId has any project on record, so a photographer with
      * project history cannot be deleted out from under it.
      */
-    public static function existsForCustomer(int $customerId): bool
+    public static function existsForPhotographer(int $photographerId): bool
     {
         return Database::selectOne(
-            'SELECT id FROM projects WHERE customer_id = ? LIMIT 1',
-            [$customerId],
+            'SELECT id FROM projects WHERE photographer_id = ? LIMIT 1',
+            [$photographerId],
         ) !== null;
     }
 

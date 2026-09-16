@@ -6,17 +6,17 @@ declare(strict_types=1);
  * End-to-end check of the Work Management acceptance criteria, run against
  * the real database.
  *
- * It creates a throwaway Manager, Employee and Customer, exercises the role
+ * It creates a throwaway Manager, Employee and Photographer, exercises the role
  * rules and validation on projects, then deletes everything it created.
  *
  * Usage:  php tests/work_management_check.php
  */
 
 use App\Core\Database;
-use App\Models\Customer;
+use App\Models\Photographer;
 use App\Models\Project;
 use App\Models\User;
-use App\Services\CustomerService;
+use App\Services\PhotographerService;
 use App\Services\PasswordPolicy;
 use App\Services\ProjectService;
 use App\Services\UserService;
@@ -60,12 +60,12 @@ function refused(callable $callback): bool
 $suffix        = bin2hex(random_bytes(4));
 $managerEmail  = 'wm-manager-' . $suffix . '@sunrisefilms.test';
 $employeeEmail = 'wm-employee-' . $suffix . '@sunrisefilms.test';
-$customerEmail = 'wm-customer-' . $suffix . '@sunrisefilms.test';
+$photographerEmail = 'wm-photographer-' . $suffix . '@sunrisefilms.test';
 
 /** @var list<int> $userIds */
 $userIds = [];
-/** @var list<int> $customerIds */
-$customerIds = [];
+/** @var list<int> $photographerIds */
+$photographerIds = [];
 /** @var list<int> $projectIds */
 $projectIds = [];
 
@@ -104,13 +104,13 @@ try {
     ]);
     $userIds[] = $employee->id;
 
-    $customer = CustomerService::create($admin, [
-        'name'    => 'Work Mgmt Customer',
-        'email'   => $customerEmail,
+    $photographer = PhotographerService::create($admin, [
+        'name'    => 'Work Mgmt Photographer',
+        'email'   => $photographerEmail,
         'phone'   => '+91 99999 55555',
         'address' => '5 Brigade Road, Bengaluru 560001',
     ]);
-    $customerIds[] = $customer->id;
+    $photographerIds[] = $photographer->id;
 
     // =======================================================================
     echo PHP_EOL . 'Work Management - access' . PHP_EOL;
@@ -124,41 +124,149 @@ try {
     echo PHP_EOL . 'Work Management - validation' . PHP_EOL;
 
     $blank = ProjectService::validate([
-        'customer_id' => '', 'name' => '', 'description' => '', 'folder_name' => '',
+        'photographer_id' => '', 'customer_name' => '', 'description' => '', 'folder_name' => '',
         'deadline' => '', 'total_payment' => '',
     ]);
 
     check(
         'every required field is enforced',
         count(array_intersect(
-            ['customer_id', 'name', 'description', 'folder_name', 'deadline', 'total_payment'],
+            ['photographer_id', 'customer_name', 'description', 'folder_name', 'deadline', 'total_payment'],
             array_keys($blank->errors()),
         )) === 6,
     );
 
-    check('a non-existent customer is refused', array_key_exists('customer_id', ProjectService::validate([
-        'customer_id' => '999999999', 'name' => 'X', 'description' => 'Y', 'folder_name' => 'Z',
+    check('a non-existent photographer is refused', array_key_exists('photographer_id', ProjectService::validate([
+        'photographer_id' => '999999999', 'customer_name' => 'X', 'description' => 'Y', 'folder_name' => 'Z',
         'deadline' => '2026-12-31', 'total_payment' => '100',
     ])->errors()));
 
     check('a malformed deadline is refused', array_key_exists('deadline', ProjectService::validate([
-        'customer_id' => (string) $customer->id, 'name' => 'X', 'description' => 'Y', 'folder_name' => 'Z',
+        'photographer_id' => (string) $photographer->id, 'customer_name' => 'X', 'description' => 'Y', 'folder_name' => 'Z',
         'deadline' => 'not-a-date', 'total_payment' => '100',
     ])->errors()));
 
     check('a malformed payment amount is refused', array_key_exists('total_payment', ProjectService::validate([
-        'customer_id' => (string) $customer->id, 'name' => 'X', 'description' => 'Y', 'folder_name' => 'Z',
+        'photographer_id' => (string) $photographer->id, 'customer_name' => 'X', 'description' => 'Y', 'folder_name' => 'Z',
         'deadline' => '2026-12-31', 'total_payment' => 'lots',
     ])->errors()));
+
+    // -----------------------------------------------------------------------
+    echo PHP_EOL . 'Work Management - payment collected with the project' . PHP_EOL;
+
+    /**
+     * The validation errors for a new project worth 50,000 whose optional
+     * "Payment received" block carries $payment.
+     *
+     * @param array<string, string> $payment
+     * @return array<string, string>
+     */
+    $upfront = static function (array $payment) use ($photographer): array {
+        return ProjectService::validate($payment + [
+            'photographer_id' => (string) $photographer->id,
+            'customer_name'   => 'X',
+            'description'     => 'Y',
+            'folder_name'     => 'Z',
+            'deadline'        => '2026-12-31',
+            'total_payment'   => '50000',
+        ])->errors();
+    };
+
+    check('the payment block is optional', $upfront([]) === []);
+
+    check(
+        'an advance for part of the total is accepted',
+        $upfront(['payment_type' => 'advance', 'payment_amount' => '10000', 'payment_method' => 'cash']) === [],
+    );
+
+    check(
+        'a full payment for the whole total is accepted',
+        $upfront(['payment_type' => 'full', 'payment_amount' => '50000', 'payment_method' => 'upi']) === [],
+    );
+
+    check(
+        'a full payment for less than the total is refused',
+        array_key_exists('payment_amount', $upfront([
+            'payment_type' => 'full', 'payment_amount' => '20000', 'payment_method' => 'cash',
+        ])),
+    );
+
+    check(
+        'an advance for the whole total is refused as a full payment instead',
+        array_key_exists('payment_type', $upfront([
+            'payment_type' => 'advance', 'payment_amount' => '50000', 'payment_method' => 'cash',
+        ])),
+    );
+
+    check(
+        'an advance above the total is refused',
+        array_key_exists('payment_amount', $upfront([
+            'payment_type' => 'advance', 'payment_amount' => '60000', 'payment_method' => 'cash',
+        ])),
+    );
+
+    check(
+        'an amount with no payment type is refused',
+        array_key_exists('payment_type', $upfront(['payment_amount' => '10000', 'payment_method' => 'cash'])),
+    );
+
+    check(
+        'a payment type with no amount is refused',
+        array_key_exists('payment_amount', $upfront(['payment_type' => 'advance', 'payment_method' => 'cash'])),
+    );
+
+    check(
+        'a payment with no method is refused',
+        array_key_exists('payment_method', $upfront(['payment_type' => 'advance', 'payment_amount' => '10000'])),
+    );
+
+    check(
+        'an unrecognised payment type is refused',
+        array_key_exists('payment_type', $upfront([
+            'payment_type' => 'milestone', 'payment_amount' => '10000', 'payment_method' => 'cash',
+        ])),
+    );
+
+    check(
+        'an unrecognised payment method is refused',
+        array_key_exists('payment_method', $upfront([
+            'payment_type' => 'advance', 'payment_amount' => '10000', 'payment_method' => 'bitcoin',
+        ])),
+    );
+
+    check(
+        'a negative amount is refused',
+        array_key_exists('payment_amount', $upfront([
+            'payment_type' => 'advance', 'payment_amount' => '-5000', 'payment_method' => 'cash',
+        ])),
+    );
+
+    // -----------------------------------------------------------------------
+    echo PHP_EOL . 'Work Management - WhatsApp bill delivery' . PHP_EOL;
+
+    check('a local 10-digit number gets its country code', whatsapp_number('9876543210') === '919876543210');
+    check('a number written with +91 and spaces is normalised', whatsapp_number('+91 98765 43210') === '919876543210');
+    check('a trunk "0" is dropped', whatsapp_number('098765 43210') === '919876543210');
+    check('a "00" international prefix is dropped', whatsapp_number('0091-98765-43210') === '919876543210');
+    check('a number that is too short gets no link', whatsapp_number('12345') === null);
+    check('an empty number gets no link', whatsapp_number('') === null && whatsapp_number(null) === null);
+    check('no usable number means no WhatsApp url', whatsapp_url('12345', 'hello') === null);
+
+    $waUrl = whatsapp_url('+91 98765 43210', 'Receipt PAY-0001');
+
+    check(
+        'the WhatsApp url carries the number and the pre-typed message',
+        $waUrl === 'https://wa.me/919876543210?text=Receipt%20PAY-0001',
+    );
 
     // -----------------------------------------------------------------------
     echo PHP_EOL . 'Work Management - add and capture' . PHP_EOL;
 
     $project = ProjectService::create($admin, [
-        'customer_id'     => (string) $customer->id,
-        'name'            => 'Wedding Film',
+        'photographer_id' => (string) $photographer->id,
+        'customer_name'   => 'Sharma Family',
         'description'     => 'Full day coverage and edit.',
-        'folder_name'     => 'WMCustomer_Wedding_2026',
+        'folder_name'     => 'WMPhotographer_Wedding_2026',
         'deadline'        => '2026-12-31',
         'total_payment'   => '50000',
     ]);
@@ -170,16 +278,16 @@ try {
 
     $stored = Project::findById($project->id);
 
-    check('project name is stored', $stored?->name === 'Wedding Film');
-    check('project folder name is stored', $stored?->folderName === 'WMCustomer_Wedding_2026');
+    check('the customer name is stored', $stored?->customerName === 'Sharma Family');
+    check('project folder name is stored', $stored?->folderName === 'WMPhotographer_Wedding_2026');
     check('project deadline is stored', $stored?->deadline === '2026-12-31');
     check('total payment is stored', $stored?->totalPayment === 50000.0);
 
     $managerProject = ProjectService::create($manager, [
-        'customer_id'     => (string) $customer->id,
-        'name'            => 'Product Shoot',
+        'photographer_id' => (string) $photographer->id,
+        'customer_name'   => 'Mehta Retail',
         'description'     => 'Half day studio shoot.',
-        'folder_name'     => 'WMCustomer_Shoot_2026',
+        'folder_name'     => 'WMPhotographer_Shoot_2026',
         'deadline'        => '2026-11-30',
         'total_payment'   => '15000',
     ]);
@@ -188,8 +296,8 @@ try {
     check('manager can add a project', $managerProject->createdBy === $manager->id);
 
     check('employee cannot add a project', refused(static fn () => ProjectService::create($employee, [
-        'customer_id'     => (string) $customer->id,
-        'name'            => 'Should Not Exist',
+        'photographer_id' => (string) $photographer->id,
+        'customer_name'   => 'Should Not Exist',
         'description'     => 'N/A',
         'folder_name'     => 'N/A',
         'deadline'        => '2026-12-31',
@@ -204,26 +312,26 @@ try {
         ProjectService::list($manager),
     ), true));
 
-    $hits = ProjectService::list($admin, 'Product Shoot');
-    check('projects can be searched by name', count($hits) === 1 && $hits[0]->id === $managerProject->id);
+    $hits = ProjectService::list($admin, 'Mehta Retail');
+    check('projects can be searched by customer name', count($hits) === 1 && $hits[0]->id === $managerProject->id);
 
-    $suggested = ProjectService::suggest($admin, 'Product Shoot');
+    $suggested = ProjectService::suggest($admin, 'Mehta Retail');
     check('suggest returns the same match', count($suggested) === 1 && $suggested[0]->id === $managerProject->id);
     check('an empty search suggests nothing', ProjectService::suggest($admin, '') === []);
 
-    $byCustomer = ProjectService::list($admin, '', '', $customer->id);
-    check('projects can be filtered by customer', count($byCustomer) === 2);
+    $byPhotographer = ProjectService::list($admin, '', '', $photographer->id);
+    check('projects can be filtered by photographer', count($byPhotographer) === 2);
 
     $updated = ProjectService::update($manager, $project, [
-        'customer_id'     => (string) $customer->id,
-        'name'            => 'Wedding Film - Renamed',
+        'photographer_id' => (string) $photographer->id,
+        'customer_name'   => 'Sharma Family - Reception too',
         'description'     => 'Full day coverage, edit and highlight reel.',
-        'folder_name'     => 'WMCustomer_Wedding_2026_v2',
+        'folder_name'     => 'WMPhotographer_Wedding_2026_v2',
         'deadline'        => '2027-01-15',
         'total_payment'   => '60000',
     ]);
 
-    check('manager can edit a project', $updated->name === 'Wedding Film - Renamed'
+    check('manager can edit a project', $updated->customerName === 'Sharma Family - Reception too'
         && $updated->totalPayment === 60000.0);
 
     ProjectService::setStatus($manager, $project, Project::STATUS_IN_PROGRESS);
@@ -238,8 +346,8 @@ try {
     ));
 
     check(
-        'a customer with projects on record cannot be deleted',
-        refused(static fn () => CustomerService::delete($admin, $customer)),
+        'a photographer with projects on record cannot be deleted',
+        refused(static fn () => PhotographerService::delete($admin, $photographer)),
     );
 
     ProjectService::delete($admin, $managerProject);
@@ -250,8 +358,8 @@ try {
         Database::statement('DELETE FROM projects WHERE id = ?', [$id]);
     }
 
-    foreach ($customerIds as $id) {
-        Database::statement('DELETE FROM customers WHERE id = ?', [$id]);
+    foreach ($photographerIds as $id) {
+        Database::statement('DELETE FROM photographers WHERE id = ?', [$id]);
     }
 
     foreach (array_reverse($userIds) as $id) {

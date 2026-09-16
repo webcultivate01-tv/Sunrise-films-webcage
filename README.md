@@ -7,7 +7,7 @@ sign-up, hierarchical account creation, and hierarchical password reset.
 Built so far:
 
 - **Authentication** — three entry points, token auth, forgot/reset password, account status.
-- **Customer Management** — register, view, edit, search, deactivate and delete customers.
+- **Photographer Management** — register, view, edit, search, deactivate and delete photographers.
 - **Employee Management** — create Manager and Employee accounts with role assignment,
   scoped listing and search, edit, password reset, deactivate and delete, plus a welcome
   email to every new account.
@@ -24,16 +24,34 @@ Hand-rolled PHP MVC (no framework), MySQL, Tailwind CSS. **No Composer dependenc
 mysql -u root -p < database/schema.sql
 ```
 
-Creates the `sunrise_films` database and five tables: `users`, `customers`,
+Creates the `sunrise_films` database and five tables: `users`, `photographers`,
 `auth_tokens`, `password_resets`, `login_attempts`.
 
-If the database was created before Customer & Employee Management existed, bring it
-up to date instead — this adds `users.address` and the `customers` table, and is safe
-to run more than once:
+If the database was created before Photographer & Employee Management existed, bring it
+up to date instead — this adds `users.address`, the `photographers` table and the
+`task_descriptions` table, and is safe to run more than once:
 
 ```bash
 php database/migrate_modules.php
 ```
+
+**Upgrading an install that still calls photographers "customers".** Run this once,
+before `migrate_modules.php`. It renames in place — no row is dropped and no value is
+retyped:
+
+```bash
+php database/migrate_photographers.php
+```
+
+| Was | Is now |
+|---|---|
+| `customers` table | `photographers` |
+| `projects.customer_id` | `projects.photographer_id` |
+| `projects.name` | `projects.customer_name` |
+
+A project no longer carries a name of its own: it is identified by the photographer it
+belongs to plus `customer_name`, the photographer's own client. Existing project names
+carry over as customer names, so nothing has to be re-entered.
 
 ### 2. Environment
 
@@ -170,38 +188,44 @@ Also present: CSRF protection on every state-changing form, login/reset throttli
 app/
   Core/          Router, Request, Response, View, Database, Session, Csrf, Config, Env, Validator
   Controllers/   HomeController, DashboardController, ProfileController,
-                 CustomerController, EmployeeController, ModuleController
+                 PhotographerController, EmployeeController, ModuleController
                  Auth/AuthController        login, logout, forgot + reset password
-  Models/        User, Customer, AuthToken, PasswordReset, LoginAttempt
+  Models/        User, Photographer, AuthToken, PasswordReset, LoginAttempt,
+                 Project, Task, TaskDescription, TaskSalaryCredit, Payment, ...
   Services/      AuthService, TokenService, PasswordResetService, UserService,
-                 CustomerService, PasswordPolicy, RateLimiter, MailService,
+                 PhotographerService, PasswordPolicy, RateLimiter, MailService,
                  WelcomeMailer, PhotoUploadService, AuthResult
   Middleware/    Authenticate, AuthorizeRoles, RedirectIfAuthenticated, VerifyCsrfToken
   Helpers/       functions.php     view helpers (e, csrf_field, old, field_error, ...)
-  Views/         layouts, auth, customers, employees, modules, partials, errors
+  Views/         layouts, auth, photographers, employees, projects, tasks, my-work,
+                 payments, salary, reports, modules, partials, errors
 config/          config.php
-database/        schema.sql, seed.php, migrate_modules.php
+database/        schema.sql, schema/ (one file per table), seed.php, seed_demo.php,
+                 migrate_modules.php, migrate_photographers.php
 routes/          web.php
 public/          index.php (front controller), assets/, uploads/
 storage/         logs/, mail/
 tests/           auth_check.php     authentication acceptance criteria
-                 modules_check.php  customer + employee management acceptance criteria
+                 modules_check.php  photographer + employee management acceptance criteria
+                 work_management_check.php, task_management_check.php,
+                 payment_management_check.php, monthly_salary_check.php,
+                 reports_check.php
 ```
 
 ---
 
-## Customer & Employee Management
+## Photographer & Employee Management
 
 Both modules are open to **Admin** and **Manager** and closed to **Employee**. That is
 enforced three times over: the routes are never registered on the `/employee` panel, the
-`roles:admin,manager` middleware guards the group, and `UserService` / `CustomerService`
+`roles:admin,manager` middleware guards the group, and `UserService` / `PhotographerService`
 re-check scope on every read and write.
 
 | | Admin | Manager | Employee |
 |---|---|---|---|
-| Customers — view / add / edit / search | yes | yes | no |
-| Customers — deactivate | yes | yes | no |
-| Customers — delete outright | yes | no | no |
+| Photographers — view / add / edit / search | yes | yes | no |
+| Photographers — deactivate | yes | yes | no |
+| Photographers — delete outright | yes | no | no |
 | Employees — view | all users | their own employees | no |
 | Employees — add Manager | yes | no | no |
 | Employees — add Employee | yes | yes | no |
@@ -214,7 +238,7 @@ Notes on the decisions the spec left open:
   it; deleting destroys the record and is Admin-only. A Manager who still owns Employee
   accounts cannot be deleted — deactivate them instead, so their team is never orphaned.
 - **Manager scope.** A Manager sees and manages only the Employees they created. An Admin
-  is system-wide. Customers are shared: every Admin and Manager sees every customer.
+  is system-wide. Photographers are shared: every Admin and Manager sees every photographer.
 - **Passwords.** The Add User form asks for no password (module spec s7). The system
   generates a temporary one, emails it with the welcome message, and shows it once to
   whoever created the account in case mail delivery is not configured yet.
@@ -222,12 +246,44 @@ Notes on the decisions the spec left open:
 
 ---
 
+## Who a job belongs to
+
+Two different people are named on every job, and the app keeps them apart:
+
+- the **photographer** is the studio's own client — the account registered in
+  Photographer Management, who sends the work and pays the bill;
+- the **customer** is the photographer's client — the wedding, the brand, the school the
+  shoot is actually for. It is a plain text field on the project (`customer_name`), not a
+  record anybody registers.
+
+So Work Management asks for a photographer from the dropdown and a customer name in the
+box beside it, and everything downstream — Task Management, Payment Management, every
+report, the invoices — shows the customer as the job's name with the photographer beside
+it.
+
+## The task description thread
+
+A photographer rarely sends the whole brief at once: corrections and extra notes keep
+arriving for work that is already out with an employee. So a task's description is a
+thread rather than a field.
+
+- Row one of every thread is the task's opening description, written when the task is
+  assigned. `tasks.description` still holds that text and is never rewritten.
+- An Admin or Manager adds a new round from the task page (`POST
+  /{panel}/tasks/{id}/descriptions`). It is appended, so the employee sees what changed
+  as well as what it changed from.
+- The employee reads the whole thread, oldest first, on their My Work page, and My Work's
+  list flags how many rounds arrived after the original.
+- Reassigning a task copies the thread onto the new task, so the new employee inherits
+  the full brief rather than only its opening round.
+- A task that is completed, exited or reassigned takes no further rounds — anything new
+  belongs on the task that superseded it.
 ## Panel navigation
 
 Every signed-in panel (`app/Views/layouts/panel.php`) renders a single sidebar shell,
 built from the authenticated user's role — there is only one authentication system in
 this project. The sidebar lists Dashboard, the modules that are built and routed for that
-role (Customer Management and Employee Management, for Admin and Manager), My Account,
+role (Photographer Management and Employee Management, for Admin and Manager), My Account,
 and the wider set of modules the product is heading toward (Work Management, Reports, ...).
 
 `app/Support/PanelModules.php` holds both lists: `BUILT` entries link to real controllers,

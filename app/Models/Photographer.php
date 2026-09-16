@@ -7,11 +7,11 @@ namespace App\Models;
 use App\Core\Database;
 
 /**
- * A customer of the business (module spec s3, s4). Unlike a User a customer
+ * A photographer of the business (module spec s3, s4). Unlike a User a photographer
  * never signs in, so there is no role, password or token: the record exists so
  * that work orders, bills and payments have somebody to point at.
  */
-final class Customer
+final class Photographer
 {
     public const STATUS_ACTIVE   = 'active';
     public const STATUS_INACTIVE = 'inactive';
@@ -26,7 +26,7 @@ final class Customer
         public readonly ?int $createdBy,
         public readonly ?string $createdAt,
         public readonly ?string $updatedAt,
-        /** Name of the user who registered this customer, when joined in. */
+        /** Name of the user who registered this photographer, when joined in. */
         public readonly ?string $createdByName = null,
     ) {
     }
@@ -54,7 +54,7 @@ final class Customer
     {
         $row = Database::selectOne(
             'SELECT c.*, u.name AS created_by_name
-               FROM customers c
+               FROM photographers c
                LEFT JOIN users u ON u.id = c.created_by
               WHERE c.id = ?
               LIMIT 1',
@@ -65,13 +65,13 @@ final class Customer
     }
 
     /**
-     * Module spec s14: the email address is what makes a customer unique, so a
+     * Module spec s14: the email address is what makes a photographer unique, so a
      * second record for the same address is refused. $exceptId lets an edit
      * keep its own address.
      */
     public static function emailExists(string $email, ?int $exceptId = null): bool
     {
-        $sql      = 'SELECT id FROM customers WHERE email = ?';
+        $sql      = 'SELECT id FROM photographers WHERE email = ?';
         $bindings = [mb_strtolower($email)];
 
         if ($exceptId !== null) {
@@ -83,19 +83,19 @@ final class Customer
     }
 
     /**
-     * The customer list, optionally narrowed by the search box (module spec
-     * s5). Every Admin and Manager sees every customer (module spec s13), so
+     * The photographer list, optionally narrowed by the search box (module spec
+     * s5). Every Admin and Manager sees every photographer (module spec s13), so
      * there is no ownership filter here.
      *
-     * $startDate/$endDate narrow to customers registered in that range
-     * (Reports: Customer Report) - blank means no bound either side.
+     * $startDate/$endDate narrow to photographers registered in that range
+     * (Reports: Photographer Report) - blank means no bound either side.
      *
      * @return list<self>
      */
     public static function all(string $search = '', string $status = '', string $startDate = '', string $endDate = ''): array
     {
         $sql      = 'SELECT c.*, u.name AS created_by_name
-                       FROM customers c
+                       FROM photographers c
                        LEFT JOIN users u ON u.id = c.created_by
                       WHERE 1 = 1';
         $bindings = [];
@@ -135,7 +135,7 @@ final class Customer
         string $status = self::STATUS_ACTIVE,
     ): int {
         Database::statement(
-            'INSERT INTO customers (name, email, phone, address, status, created_by)
+            'INSERT INTO photographers (name, email, phone, address, status, created_by)
              VALUES (?, ?, ?, ?, ?, ?)',
             [$name, mb_strtolower($email), $phone, $address, $status, $createdBy],
         );
@@ -146,19 +146,19 @@ final class Customer
     public static function update(int $id, string $name, string $email, string $phone, string $address): void
     {
         Database::statement(
-            'UPDATE customers SET name = ?, email = ?, phone = ?, address = ? WHERE id = ?',
+            'UPDATE photographers SET name = ?, email = ?, phone = ?, address = ? WHERE id = ?',
             [$name, mb_strtolower($email), $phone, $address, $id],
         );
     }
 
     public static function updateStatus(int $id, string $status): void
     {
-        Database::statement('UPDATE customers SET status = ? WHERE id = ?', [$status, $id]);
+        Database::statement('UPDATE photographers SET status = ? WHERE id = ?', [$status, $id]);
     }
 
     public static function delete(int $id): void
     {
-        Database::statement('DELETE FROM customers WHERE id = ?', [$id]);
+        Database::statement('DELETE FROM photographers WHERE id = ?', [$id]);
     }
 
     /**
@@ -168,7 +168,7 @@ final class Customer
     {
         $counts = [self::STATUS_ACTIVE => 0, self::STATUS_INACTIVE => 0];
 
-        foreach (Database::select('SELECT status, COUNT(*) AS total FROM customers GROUP BY status') as $row) {
+        foreach (Database::select('SELECT status, COUNT(*) AS total FROM photographers GROUP BY status') as $row) {
             $counts[(string) $row['status']] = (int) $row['total'];
         }
 

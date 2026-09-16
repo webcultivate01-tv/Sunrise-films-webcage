@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /**
  * Seeds realistic demo data (Indian names) for manual testing of every
- * module: Managers and Employees under them, Customers, Projects and Tasks
+ * module: Managers and Employees under them, Photographers, Projects and Tasks
  * covering every status the app supports (assigned, accepted, in_progress,
  * completed with a salary credit, exited, and a reassigned task), and
  * Payments covering every Payment Management status (Partially Paid, Fully
@@ -14,17 +14,18 @@ declare(strict_types=1);
  * same default as the bootstrap Admin from seed.php - run that first.
  *
  * Safe to run more than once: existing rows (matched by email, or by name for
- * customers/projects/tasks, or by project + reference number for payments)
+ * photographers/projects/tasks, or by project + reference number for payments)
  * are left as they are rather than duplicated.
  *
  * Usage:  php database/seed_demo.php
  */
 
 use App\Core\Database;
-use App\Models\Customer;
+use App\Models\Photographer;
 use App\Models\Payment;
 use App\Models\Project;
 use App\Models\Task;
+use App\Models\TaskDescription;
 use App\Models\TaskSalaryCredit;
 use App\Models\User;
 use App\Services\PasswordPolicy;
@@ -74,29 +75,29 @@ function findOrCreateUser(
     return User::findById($id);
 }
 
-function findOrCreateCustomer(
+function findOrCreatePhotographer(
     string $name,
     string $email,
     string $phone,
     string $address,
     ?int $createdBy,
-): Customer {
-    if (Customer::emailExists($email)) {
-        $row = Database::selectOne('SELECT id FROM customers WHERE email = ? LIMIT 1', [mb_strtolower($email)]);
-        echo "  - Customer: {$name} already exists - skipped." . PHP_EOL;
+): Photographer {
+    if (Photographer::emailExists($email)) {
+        $row = Database::selectOne('SELECT id FROM photographers WHERE email = ? LIMIT 1', [mb_strtolower($email)]);
+        echo "  - Photographer: {$name} already exists - skipped." . PHP_EOL;
 
-        return Customer::findById((int) $row['id']);
+        return Photographer::findById((int) $row['id']);
     }
 
-    $id = Customer::create($name, $email, $phone, $address, $createdBy);
-    echo "  - Customer: {$name} created." . PHP_EOL;
+    $id = Photographer::create($name, $email, $phone, $address, $createdBy);
+    echo "  - Photographer: {$name} created." . PHP_EOL;
 
-    return Customer::findById($id);
+    return Photographer::findById($id);
 }
 
 function findOrCreateProject(
-    int $customerId,
-    string $name,
+    int $photographerId,
+    string $customerName,
     string $description,
     string $folderName,
     string $deadline,
@@ -105,23 +106,23 @@ function findOrCreateProject(
     ?int $createdBy,
 ): Project {
     $row = Database::selectOne(
-        'SELECT id FROM projects WHERE customer_id = ? AND name = ? LIMIT 1',
-        [$customerId, $name],
+        'SELECT id FROM projects WHERE photographer_id = ? AND customer_name = ? LIMIT 1',
+        [$photographerId, $customerName],
     );
 
     if ($row !== null) {
-        echo "  - Project: {$name} already exists - skipped." . PHP_EOL;
+        echo "  - Project: {$customerName} already exists - skipped." . PHP_EOL;
 
         return Project::findById((int) $row['id']);
     }
 
-    $id = Project::create($customerId, $name, $description, $folderName, $deadline, $totalPayment, $createdBy, $status);
+    $id = Project::create($photographerId, $customerName, $description, $folderName, $deadline, $totalPayment, $createdBy, $status);
 
     if ($status !== Project::STATUS_PENDING) {
         Project::updateStatus($id, $status);
     }
 
-    echo "  - Project: {$name} ({$status}) created." . PHP_EOL;
+    echo "  - Project: {$customerName} ({$status}) created." . PHP_EOL;
 
     return Project::findById($id);
 }
@@ -183,6 +184,9 @@ function seedTask(
     }
 
     $id = Task::create($projectId, $employeeId, $title, $description, $startDate, $endDate, $priority, $amount, $createdBy);
+
+    // Row one of the task's own description thread, the same as TaskService.
+    TaskDescription::create($id, $description, $createdBy);
 
     if (in_array($finalStatus, [Task::STATUS_ACCEPTED, Task::STATUS_IN_PROGRESS, Task::STATUS_COMPLETED, Task::STATUS_EXITED], true)) {
         Task::accept($id);
@@ -247,17 +251,17 @@ $neha    = findOrCreateUser('Neha Joshi', 'neha.joshi@sunrisefilms.in', '+91 912
 $karan   = findOrCreateUser('Karan Malhotra', 'karan.malhotra@sunrisefilms.in', '+91 91234 56709', '48 Model Town, Ludhiana, Punjab', User::ROLE_EMPLOYEE, $vikram->id);
 
 // ---------------------------------------------------------------------------
-// Customers
+// Photographers
 // ---------------------------------------------------------------------------
 
-echo PHP_EOL . 'Customers' . PHP_EOL;
+echo PHP_EOL . 'Photographers' . PHP_EOL;
 
-$custRohitSimran = findOrCreateCustomer('Rohit & Simran Wedding', 'rohit.simran.wedding@gmail.com', '+91 90000 11111', '11 Bandra West, Mumbai, Maharashtra', $admin->id);
-$custOmSai       = findOrCreateCustomer('Om Sai Productions', 'contact@omsaiproductions.in', '+91 90000 22222', '6 FC Road, Pune, Maharashtra', $priya->id);
-$custMalhotra    = findOrCreateCustomer('Malhotra Family Events', 'malhotra.events@gmail.com', '+91 90000 33333', '19 Karol Bagh, New Delhi', $vikram->id);
-$custSunriseRealty = findOrCreateCustomer('Sunrise Realty Group', 'info@sunriserealtygroup.in', '+91 90000 44444', '5th Floor, MG Road, Bengaluru, Karnataka', $admin->id);
-$custGanpatiMandal = findOrCreateCustomer('Ganpati Utsav Mandal', 'ganpatimandal@gmail.com', '+91 90000 55555', 'Mandal Chowk, Nashik, Maharashtra', $rajesh->id);
-$custSaraswati   = findOrCreateCustomer('Saraswati Vidyalaya', 'admin@saraswatividyalaya.edu.in', '+91 90000 66666', 'Dharampeth, Nagpur, Maharashtra', $priya->id);
+$photogAperture    = findOrCreatePhotographer('Aperture Studio', 'studio@aperturestudio.in', '+91 90000 11111', '11 Bandra West, Mumbai, Maharashtra', $admin->id);
+$photogOmSai       = findOrCreatePhotographer('Om Sai Productions', 'contact@omsaiproductions.in', '+91 90000 22222', '6 FC Road, Pune, Maharashtra', $priya->id);
+$photogMalhotra    = findOrCreatePhotographer('Malhotra Photography', 'studio@malhotraphotography.in', '+91 90000 33333', '19 Karol Bagh, New Delhi', $vikram->id);
+$photogFrameworks  = findOrCreatePhotographer('Frameworks Media', 'hello@frameworksmedia.in', '+91 90000 44444', '5th Floor, MG Road, Bengaluru, Karnataka', $admin->id);
+$photogNashikClick = findOrCreatePhotographer('Nashik Click Studio', 'contact@nashikclick.in', '+91 90000 55555', 'Mandal Chowk, Nashik, Maharashtra', $rajesh->id);
+$photogShutterline = findOrCreatePhotographer('Shutterline Studio', 'studio@shutterline.in', '+91 90000 66666', 'Dharampeth, Nagpur, Maharashtra', $priya->id);
 
 // ---------------------------------------------------------------------------
 // Projects
@@ -266,8 +270,8 @@ $custSaraswati   = findOrCreateCustomer('Saraswati Vidyalaya', 'admin@saraswativ
 echo PHP_EOL . 'Projects' . PHP_EOL;
 
 $projWedding = findOrCreateProject(
-    $custRohitSimran->id,
-    'Rohit Weds Simran - Wedding Film',
+    $photogAperture->id,
+    'Rohit & Simran',
     'Full wedding cinematography and same-day edit across three ceremony days.',
     '2026_Rohit_Simran_Wedding',
     '2026-10-05',
@@ -277,8 +281,8 @@ $projWedding = findOrCreateProject(
 );
 
 $projPreWedding = findOrCreateProject(
-    $custRohitSimran->id,
-    'Pre-Wedding Shoot - Goa',
+    $photogAperture->id,
+    'Rohit & Simran - Pre-Wedding',
     'Two-day pre-wedding shoot at Goa beach locations.',
     'Rohit_Simran_PreWedding_Goa',
     '2026-08-30',
@@ -288,8 +292,8 @@ $projPreWedding = findOrCreateProject(
 );
 
 $projGaneshSong = findOrCreateProject(
-    $custOmSai->id,
-    'Ganesh Chaturthi Devotional Song',
+    $photogOmSai->id,
+    'Ganesh Utsav Mandal',
     'Devotional music video shot at a local temple with a full crew.',
     'OmSai_Ganesh_Song_2026',
     '2026-09-20',
@@ -299,8 +303,8 @@ $projGaneshSong = findOrCreateProject(
 );
 
 $projShortFilm = findOrCreateProject(
-    $custOmSai->id,
-    'Marathi Short Film - Paus',
+    $photogOmSai->id,
+    'Paus Film Collective',
     'A 20-minute Marathi short film about a monsoon romance.',
     'OmSai_Paus_ShortFilm',
     '2026-09-05',
@@ -310,8 +314,8 @@ $projShortFilm = findOrCreateProject(
 );
 
 $projAnniversary = findOrCreateProject(
-    $custMalhotra->id,
-    '60th Anniversary Celebration Film',
+    $photogMalhotra->id,
+    'Malhotra Family',
     'Same-day highlight film for a diamond jubilee anniversary celebration.',
     'Malhotra_Anniversary_2026',
     '2026-09-25',
@@ -321,8 +325,8 @@ $projAnniversary = findOrCreateProject(
 );
 
 $projBrandAd = findOrCreateProject(
-    $custSunriseRealty->id,
-    'Corporate Brand Ad Film',
+    $photogFrameworks->id,
+    'Sunrise Realty Group',
     'A 60-second brand film for a real-estate launch campaign.',
     'SunriseRealty_BrandAd_2026',
     '2026-10-10',
@@ -332,8 +336,8 @@ $projBrandAd = findOrCreateProject(
 );
 
 $projGanpatiHighlights = findOrCreateProject(
-    $custGanpatiMandal->id,
-    'Ganeshotsav Highlights Reel',
+    $photogNashikClick->id,
+    'Ganpati Utsav Mandal',
     'A 5-minute highlights reel of the ten-day Ganeshotsav celebrations.',
     'GanpatiMandal_Highlights_2026',
     '2026-09-18',
@@ -343,8 +347,8 @@ $projGanpatiHighlights = findOrCreateProject(
 );
 
 $projAnnualDay = findOrCreateProject(
-    $custSaraswati->id,
-    'Annual Day Function Coverage',
+    $photogShutterline->id,
+    'Saraswati Vidyalaya',
     'Full-day multi-camera coverage of the school annual day function.',
     'Saraswati_AnnualDay_2026',
     '2026-12-05',
@@ -378,7 +382,7 @@ findOrCreatePayment($projBrandAd->id, 100000.00, Payment::TYPE_ADVANCE, Payment:
 
 echo PHP_EOL . 'Tasks' . PHP_EOL;
 
-seedTask($projWedding->id, $amit->id, 'Wedding Day Cinematic Shoot', 'Cinematic coverage of the main wedding ceremony.', '2026-09-10', '2026-10-05', Task::PRIORITY_HIGH, 40000.00, $rajesh->id, Task::STATUS_IN_PROGRESS, 60);
+$taskWeddingShoot = seedTask($projWedding->id, $amit->id, 'Wedding Day Cinematic Shoot', 'Cinematic coverage of the main wedding ceremony.', '2026-09-10', '2026-10-05', Task::PRIORITY_HIGH, 40000.00, $rajesh->id, Task::STATUS_IN_PROGRESS, 60);
 seedTask($projWedding->id, $sneha->id, 'Sangeet Ceremony Coverage', 'Multi-camera coverage of the sangeet night.', '2026-09-08', '2026-09-15', Task::PRIORITY_MEDIUM, 25000.00, $rajesh->id, Task::STATUS_COMPLETED);
 seedTask($projWedding->id, $arjun->id, 'Wedding Film Editing & Color Grade', 'Edit and color grade the full wedding film.', '2026-09-20', '2026-10-04', Task::PRIORITY_HIGH, 50000.00, $rajesh->id, Task::STATUS_ASSIGNED);
 
@@ -409,6 +413,7 @@ if ($reassignRow === null) {
         $exitedScript->id,
     );
     Task::accept($newId);
+    TaskDescription::copyThread($exitedScript->id, $newId);
     Task::updateProgress($newId, 30, Task::STATUS_IN_PROGRESS);
     echo '    - Task: Script Finalization reassigned to Suresh Yadav (in_progress) created.' . PHP_EOL;
 } else {
@@ -427,6 +432,34 @@ seedTask($projGanpatiHighlights->id, $arjun->id, 'Highlights Video Edit', 'Edit 
 seedTask($projAnnualDay->id, $kavita->id, 'Event Coverage Planning', 'Plan camera positions and shot list for the annual day event.', '2026-11-01', '2026-11-20', Task::PRIORITY_LOW, 10000.00, $priya->id, Task::STATUS_ASSIGNED);
 
 seedTask($projPreWedding->id, $neha->id, 'Pre-Wedding Shoot Editing', 'Edit the Goa pre-wedding shoot footage.', '2026-08-05', '2026-08-25', Task::PRIORITY_MEDIUM, 15000.00, $vikram->id, Task::STATUS_EXITED);
+
+// ---------------------------------------------------------------------------
+// Description threads - a photographer sending fresh instructions for work
+// that is already out with an employee, which is what the thread exists for.
+// ---------------------------------------------------------------------------
+
+echo PHP_EOL . 'Description threads' . PHP_EOL;
+
+$followUps = [
+    [$taskWeddingShoot->id, 'Client has asked for drone coverage of the baraat as well. Add it on the morning of the 10th.', $rajesh->id],
+    [$taskWeddingShoot->id, 'One more from the client: keep the mandap audio clean, they want the vows usable in the final cut.', $rajesh->id],
+];
+
+foreach ($followUps as [$taskId, $body, $author]) {
+    $existing = Database::selectOne(
+        'SELECT id FROM task_descriptions WHERE task_id = ? AND body = ? LIMIT 1',
+        [$taskId, $body],
+    );
+
+    if ($existing !== null) {
+        echo '  - Follow-up description already exists - skipped.' . PHP_EOL;
+
+        continue;
+    }
+
+    TaskDescription::create($taskId, $body, $author);
+    echo '  - Follow-up description added to task #' . $taskId . '.' . PHP_EOL;
+}
 
 // ---------------------------------------------------------------------------
 

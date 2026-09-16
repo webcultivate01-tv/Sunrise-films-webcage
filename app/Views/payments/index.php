@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\Customer;
+use App\Models\Photographer;
 
 /**
  * Payment Management - the Payment Dashboard and Project Payment Overview
@@ -11,10 +11,10 @@ use App\Models\Customer;
  * @var string         $baseUrl
  * @var string         $search
  * @var string         $status
- * @var string         $customerId
- * @var list<Customer> $customers
+ * @var string         $photographerId
+ * @var list<Photographer> $photographers
  */
-$hasFilters = $search !== '' || $status !== '' || $customerId !== '';
+$hasFilters = $search !== '' || $status !== '' || $photographerId !== '';
 
 $filters = ['' => 'All statuses'];
 
@@ -76,7 +76,7 @@ $tiles = [
 <form method="get" action="<?= e($baseUrl) ?>" class="mb-5 flex flex-wrap items-center gap-3">
     <div class="relative min-w-0 flex-1 sm:max-w-sm" data-suggest data-suggest-url="<?= e($baseUrl) ?>/suggest">
         <input type="search" name="q" value="<?= e($search) ?>"
-               placeholder="Search by project or customer name"
+               placeholder="Search by customer or photographer name"
                autocomplete="off"
                class="block w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-3.5 text-sm text-ink placeholder:text-slate-400 transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
                data-suggest-input>
@@ -88,13 +88,13 @@ $tiles = [
             class="absolute left-0 right-0 top-full z-20 mt-1 hidden max-h-72 overflow-y-auto rounded-lg border border-line bg-white py-1 text-sm shadow-lg"></ul>
     </div>
 
-    <label for="filter-customer" class="sr-only">Customer</label>
-    <select id="filter-customer" name="customer_id"
+    <label for="filter-photographer" class="sr-only">Photographer</label>
+    <select id="filter-photographer" name="photographer_id"
             class="rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-ink transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200">
-        <option value="">All customers</option>
-        <?php foreach ($customers as $customer): ?>
-            <option value="<?= (int) $customer->id ?>" <?= $customerId === (string) $customer->id ? 'selected' : '' ?>>
-                <?= e($customer->name) ?>
+        <option value="">All photographers</option>
+        <?php foreach ($photographers as $photographer): ?>
+            <option value="<?= (int) $photographer->id ?>" <?= $photographerId === (string) $photographer->id ? 'selected' : '' ?>>
+                <?= e($photographer->name) ?>
             </option>
         <?php endforeach; ?>
     </select>
@@ -132,7 +132,7 @@ $tiles = [
         <table class="min-w-full divide-y divide-line text-sm">
             <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                 <tr>
-                    <th scope="col" class="px-5 py-3 font-medium">Project</th>
+                    <th scope="col" class="px-5 py-3 font-medium">Customer</th>
                     <th scope="col" class="px-5 py-3 font-medium">Total value</th>
                     <th scope="col" class="px-5 py-3 font-medium">Collected</th>
                     <th scope="col" class="px-5 py-3 font-medium">Outstanding</th>
@@ -146,8 +146,8 @@ $tiles = [
                     <?php $project = $row['project']; ?>
                     <tr class="hover:bg-slate-50/70">
                         <td class="px-5 py-3.5">
-                            <p class="font-medium text-ink"><?= e($project->name) ?></p>
-                            <p class="text-xs text-slate-500"><?= e($project->customerName ?? 'Unknown customer') ?></p>
+                            <p class="font-medium text-ink"><?= e($project->customerName) ?></p>
+                            <p class="text-xs text-slate-500"><?= e($project->photographerName ?? 'Unknown photographer') ?></p>
                         </td>
                         <td class="px-5 py-3.5 text-slate-600"><?= e(money($project->totalPayment)) ?></td>
                         <td class="px-5 py-3.5 text-slate-600"><?= e(money($row['collected'])) ?></td>

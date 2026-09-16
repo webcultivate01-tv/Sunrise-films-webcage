@@ -119,7 +119,7 @@ final class TaskSalaryCredit
     public static function forEmployeeMonth(int $employeeId, string $month): array
     {
         return Database::select(
-            "SELECT tsc.*, t.title AS task_title, p.name AS project_name
+            "SELECT tsc.*, t.title AS task_title, p.customer_name AS customer_name
                FROM task_salary_credits tsc
                JOIN tasks t ON t.id = tsc.task_id
                LEFT JOIN projects p ON p.id = tsc.project_id
@@ -140,7 +140,7 @@ final class TaskSalaryCredit
      */
     public static function creditsForScope(?array $employeeIds, array $filters = []): array
     {
-        $sql = "SELECT tsc.*, t.title AS task_title, p.name AS project_name,
+        $sql = "SELECT tsc.*, t.title AS task_title, p.customer_name AS customer_name,
                         e.name AS employee_name, e.email AS employee_email
                    FROM task_salary_credits tsc
                    JOIN tasks t ON t.id = tsc.task_id

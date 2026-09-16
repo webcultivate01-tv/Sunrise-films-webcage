@@ -8,7 +8,7 @@ use App\Core\Config;
 use App\Core\Controller;
 use App\Core\Request;
 use App\Core\Response;
-use App\Models\Customer;
+use App\Models\Photographer;
 use App\Models\Payment;
 use App\Models\Project;
 use App\Models\User;
@@ -25,29 +25,29 @@ use App\Services\ProjectService;
 final class ProjectController extends Controller
 {
     /**
-     * GET /{panel}/projects - list, search, status and customer filter.
+     * GET /{panel}/projects - list, search, status and photographer filter.
      *
      * @param array<string, string> $params
      */
     public function index(Request $request, array $params): never
     {
-        $user       = $this->user();
-        $search     = $request->string('q');
-        $status     = $request->string('status');
-        $customerId = $request->string('customer_id');
-        $sort       = $request->string('sort');
+        $user           = $this->user();
+        $search         = $request->string('q');
+        $status         = $request->string('status');
+        $photographerId = $request->string('photographer_id');
+        $sort           = $request->string('sort');
 
         $this->view('projects.index', [
-            'title'      => 'Work Management',
-            'baseUrl'    => $this->baseUrl($user),
-            'projects'   => ProjectService::list($user, $search, $status, $customerId !== '' ? (int) $customerId : null, $sort),
-            'search'     => $search,
-            'status'     => $status,
-            'customerId' => $customerId,
-            'sort'       => $sort,
-            'customers'  => Customer::all(),
-            'counts'     => Project::statusCounts(),
-            'canDelete'  => ProjectService::canDelete($user),
+            'title'          => 'Work Management',
+            'baseUrl'        => $this->baseUrl($user),
+            'projects'       => ProjectService::list($user, $search, $status, $photographerId !== '' ? (int) $photographerId : null, $sort),
+            'search'         => $search,
+            'status'         => $status,
+            'photographerId' => $photographerId,
+            'sort'           => $sort,
+            'photographers'  => Photographer::all(),
+            'counts'         => Project::statusCounts(),
+            'canDelete'      => ProjectService::canDelete($user),
         ], 'panel');
     }
 
@@ -63,10 +63,10 @@ final class ProjectController extends Controller
         ProjectService::assertAccess($user);
 
         $this->view('projects.form', [
-            'title'     => 'Add Project',
-            'baseUrl'   => $this->baseUrl($user),
-            'project'   => null,
-            'customers' => Customer::all(),
+            'title'         => 'Add Project',
+            'baseUrl'       => $this->baseUrl($user),
+            'project'       => null,
+            'photographers' => Photographer::all(),
         ], 'panel');
     }
 
@@ -80,8 +80,8 @@ final class ProjectController extends Controller
         $user  = $this->user();
         $base  = $this->baseUrl($user);
         $input = $request->only([
-            'customer_id', 'name', 'description', 'folder_name', 'deadline', 'total_payment',
-            'advance_amount', 'advance_payment_method',
+            'photographer_id', 'customer_name', 'description', 'folder_name', 'deadline', 'total_payment',
+            'payment_amount', 'payment_type', 'payment_method',
         ]);
 
         ProjectService::assertAccess($user);
@@ -94,25 +94,33 @@ final class ProjectController extends Controller
 
         $project = ProjectService::create($user, $input);
 
-        $advanceAmount = trim($input['advance_amount'] ?? '');
-        $payment       = null;
+        $paidNow = trim($input['payment_amount'] ?? '');
+        $payment = null;
 
-        if ($advanceAmount !== '' && (float) $advanceAmount > 0) {
+        if ($paidNow !== '' && (float) $paidNow > 0) {
+            $paymentType = trim($input['payment_type']);
+
             $payment = PaymentService::record($user, [
                 'project_id'     => (string) $project->id,
-                'amount'         => $advanceAmount,
-                'payment_type'   => Payment::TYPE_ADVANCE,
-                'payment_method' => trim($input['advance_payment_method']),
+                'amount'         => $paidNow,
+                'payment_type'   => $paymentType,
+                'payment_method' => trim($input['payment_method']),
                 'payment_date'   => date('Y-m-d'),
                 'reference_no'   => '',
-                'notes'          => 'Advance collected at project creation.',
+                'notes'          => $paymentType === Payment::TYPE_FULL
+                    ? 'Full payment collected at project creation.'
+                    : 'Advance collected at project creation.',
             ]);
         }
 
-        $message = sprintf('%s has been added to Work Management.', $project->name);
+        $message = sprintf('%s has been added to Work Management.', $project->customerName);
 
         if ($payment !== null) {
-            $message .= sprintf(' Advance payment of %s recorded and the bill has been generated.', money($payment->amount));
+            $message .= sprintf(
+                ' %s of %s recorded and the bill has been generated.',
+                payment_type_label($payment->paymentType),
+                money($payment->amount),
+            );
         }
 
         $this->redirectWithFlash(
@@ -138,8 +146,8 @@ final class ProjectController extends Controller
         $results = array_map(
             static fn (Project $project): array => [
                 'id'   => $project->id,
-                'name' => $project->name,
-                'sub'  => $project->customerName ?? 'Unknown customer',
+                'name' => $project->customerName,
+                'sub'  => $project->photographerName ?? 'Unknown photographer',
                 'url'  => $base . '/' . $project->id,
             ],
             ProjectService::suggest($user, $search),
@@ -159,11 +167,11 @@ final class ProjectController extends Controller
         $project = ProjectService::findOrFail($user, (int) $params['id']);
 
         $this->view('projects.show', [
-            'title'          => $project->name,
-            'baseUrl'        => $this->baseUrl($user),
-            'project'        => $project,
-            'canDelete'      => ProjectService::canDelete($user),
-            'paymentSummary' => PaymentService::projectSummary($user, $project),
+            'title'           => $project->customerName,
+            'baseUrl'         => $this->baseUrl($user),
+            'project'         => $project,
+            'canDelete'       => ProjectService::canDelete($user),
+            'paymentSummary'  => PaymentService::projectSummary($user, $project),
             'paymentsBaseUrl' => (string) Config::get('roles.' . $user->role . '.login') . '/payments',
         ], 'panel');
     }
@@ -179,15 +187,23 @@ final class ProjectController extends Controller
         $project = ProjectService::findOrFail($user, (int) $params['id']);
         $base    = $this->baseUrl($user);
 
+        $photographer = Photographer::findById($project->photographerId);
+        $summary      = PaymentService::projectSummary($user, $project);
+
         $this->view('projects.bill', [
-            'title'       => 'Invoice ' . ProjectService::billReference($project),
-            'baseUrl'     => $base,
-            'project'     => $project,
-            'customer'    => Customer::findById($project->customerId),
-            'reference'   => ProjectService::billReference($project),
-            'summary'     => PaymentService::projectSummary($user, $project),
-            'backUrl'     => $base . '/' . $project->id,
-            'downloadUrl' => $base . '/' . $project->id . '/bill/download',
+            'title'        => 'Invoice ' . ProjectService::billReference($project),
+            'baseUrl'      => $base,
+            'project'      => $project,
+            'photographer' => $photographer,
+            'reference'    => ProjectService::billReference($project),
+            'summary'      => $summary,
+            'backUrl'      => $base . '/' . $project->id,
+            'downloadUrl'  => $base . '/' . $project->id . '/bill/download',
+            'whatsappUrl'  => whatsapp_url(
+                $photographer?->phone,
+                ProjectService::billWhatsAppMessage($project, $summary),
+            ),
+            'whatsappName' => $photographer?->name ?? $project->photographerName,
         ], 'invoice');
     }
 
@@ -219,10 +235,10 @@ final class ProjectController extends Controller
         $project = ProjectService::findOrFail($user, (int) $params['id']);
 
         $this->view('projects.form', [
-            'title'     => 'Edit ' . $project->name,
-            'baseUrl'   => $this->baseUrl($user),
-            'project'   => $project,
-            'customers' => Customer::all(),
+            'title'         => 'Edit ' . $project->customerName,
+            'baseUrl'       => $this->baseUrl($user),
+            'project'       => $project,
+            'photographers' => Photographer::all(),
         ], 'panel');
     }
 
@@ -237,7 +253,7 @@ final class ProjectController extends Controller
         $project = ProjectService::findOrFail($user, (int) $params['id']);
         $base    = $this->baseUrl($user);
         $input   = $request->only([
-            'customer_id', 'name', 'description', 'folder_name', 'deadline', 'total_payment',
+            'photographer_id', 'customer_name', 'description', 'folder_name', 'deadline', 'total_payment',
         ]);
 
         $validator = ProjectService::validate($input, $project);
@@ -251,7 +267,7 @@ final class ProjectController extends Controller
         $this->redirectWithFlash(
             $base . '/' . $updated->id,
             'success',
-            sprintf('%s has been updated.', $updated->name),
+            sprintf('%s has been updated.', $updated->customerName),
         );
     }
 
@@ -271,7 +287,7 @@ final class ProjectController extends Controller
         $this->redirectWithFlash(
             $this->baseUrl($user) . '/' . $project->id,
             'success',
-            sprintf('%s is now %s.', $project->name, project_status_label($status)),
+            sprintf('%s is now %s.', $project->customerName, project_status_label($status)),
         );
     }
 
@@ -290,7 +306,7 @@ final class ProjectController extends Controller
         $this->redirectWithFlash(
             $this->baseUrl($user),
             'success',
-            sprintf('%s has been deleted.', $project->name),
+            sprintf('%s has been deleted.', $project->customerName),
         );
     }
 

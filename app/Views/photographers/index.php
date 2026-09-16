@@ -1,12 +1,12 @@
 <?php
 
-use App\Models\Customer;
+use App\Models\Photographer;
 
 /**
- * Customer Management - list, search, filter and row actions
+ * Photographer Management - list, search, filter and row actions
  * (module spec s5, s13, s16).
  *
- * @var list<Customer>     $customers
+ * @var list<Photographer>     $photographers
  * @var string             $baseUrl
  * @var string             $search
  * @var string             $status
@@ -15,22 +15,22 @@ use App\Models\Customer;
  */
 $hasFilters = $search !== '' || $status !== '';
 $filters    = [
-    ''                         => 'All customers',
-    Customer::STATUS_ACTIVE    => 'Active (' . ($counts[Customer::STATUS_ACTIVE] ?? 0) . ')',
-    Customer::STATUS_INACTIVE  => 'Inactive (' . ($counts[Customer::STATUS_INACTIVE] ?? 0) . ')',
+    ''                         => 'All photographers',
+    Photographer::STATUS_ACTIVE    => 'Active (' . ($counts[Photographer::STATUS_ACTIVE] ?? 0) . ')',
+    Photographer::STATUS_INACTIVE  => 'Inactive (' . ($counts[Photographer::STATUS_INACTIVE] ?? 0) . ')',
 ];
 ?>
 <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
     <div>
-        <h1 class="text-2xl font-semibold tracking-tight text-ink">Customer Management</h1>
+        <h1 class="text-2xl font-semibold tracking-tight text-ink">Photographer Management</h1>
         <p class="mt-1 text-sm text-slate-500">
-            <?= count($customers) ?> customer<?= count($customers) === 1 ? '' : 's' ?>
+            <?= count($photographers) ?> photographer<?= count($photographers) === 1 ? '' : 's' ?>
             <?= $hasFilters ? 'matching your filters' : 'registered' ?>.
         </p>
     </div>
     <a href="<?= e($baseUrl) ?>/create"
        class="rounded-lg bg-brand-gradient px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-110">
-        Add Customer
+        Add Photographer
     </a>
 </div>
 
@@ -66,15 +66,15 @@ $filters    = [
     <?php endif; ?>
 </form>
 
-<?php if ($customers === []): ?>
+<?php if ($photographers === []): ?>
     <div class="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center">
         <p class="text-sm font-medium text-ink">
-            <?= $hasFilters ? 'No customers match your filters' : 'No customers yet' ?>
+            <?= $hasFilters ? 'No photographers match your filters' : 'No photographers yet' ?>
         </p>
         <p class="mt-1 text-sm text-slate-500">
             <?= $hasFilters
                 ? 'Try a different search term or clear the status filter.'
-                : 'Register your first customer to get started.' ?>
+                : 'Register your first photographer to get started.' ?>
         </p>
     </div>
 <?php else: ?>
@@ -82,7 +82,7 @@ $filters    = [
         <table class="min-w-full divide-y divide-line text-sm">
             <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                 <tr>
-                    <th scope="col" class="px-5 py-3 font-medium">Customer</th>
+                    <th scope="col" class="px-5 py-3 font-medium">Photographer</th>
                     <th scope="col" class="px-5 py-3 font-medium">Contact</th>
                     <th scope="col" class="px-5 py-3 font-medium">Address</th>
                     <th scope="col" class="px-5 py-3 font-medium">Status</th>
@@ -90,42 +90,42 @@ $filters    = [
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
-                <?php foreach ($customers as $customer): ?>
-                    <tr class="cursor-pointer hover:bg-slate-50/70" data-href="<?= e($baseUrl) ?>/<?= (int) $customer->id ?>">
+                <?php foreach ($photographers as $photographer): ?>
+                    <tr class="cursor-pointer hover:bg-slate-50/70" data-href="<?= e($baseUrl) ?>/<?= (int) $photographer->id ?>">
                         <td class="px-5 py-3.5">
-                            <a href="<?= e($baseUrl) ?>/<?= (int) $customer->id ?>"
-                               class="font-medium text-ink underline-offset-2 hover:underline"><?= e($customer->name) ?></a>
-                            <?php if ($customer->createdByName !== null): ?>
-                                <p class="text-xs text-slate-500">Added by <?= e($customer->createdByName) ?></p>
+                            <a href="<?= e($baseUrl) ?>/<?= (int) $photographer->id ?>"
+                               class="font-medium text-ink underline-offset-2 hover:underline"><?= e($photographer->name) ?></a>
+                            <?php if ($photographer->createdByName !== null): ?>
+                                <p class="text-xs text-slate-500">Added by <?= e($photographer->createdByName) ?></p>
                             <?php endif; ?>
                         </td>
                         <td class="px-5 py-3.5 text-slate-600">
-                            <p><?= e($customer->email) ?></p>
-                            <p class="text-xs text-slate-500"><?= e($customer->phone) ?></p>
+                            <p><?= e($photographer->email) ?></p>
+                            <p class="text-xs text-slate-500"><?= e($photographer->phone) ?></p>
                         </td>
                         <td class="px-5 py-3.5 text-slate-600">
-                            <p class="max-w-xs truncate"><?= e($customer->address) ?></p>
+                            <p class="max-w-xs truncate"><?= e($photographer->address) ?></p>
                         </td>
                         <td class="px-5 py-3.5">
-                            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset <?= status_badge($customer->status) ?>">
-                                <?= e(ucfirst($customer->status)) ?>
+                            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset <?= status_badge($photographer->status) ?>">
+                                <?= e(ucfirst($photographer->status)) ?>
                             </span>
                         </td>
                         <td class="px-5 py-3.5">
                             <div class="flex items-center justify-end gap-2">
-                                <a href="<?= e($baseUrl) ?>/<?= (int) $customer->id ?>/edit"
+                                <a href="<?= e($baseUrl) ?>/<?= (int) $photographer->id ?>/edit"
                                    class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">
                                     Edit
                                 </a>
 
-                                <form method="post" action="<?= e($baseUrl) ?>/<?= (int) $customer->id ?>/status">
+                                <form method="post" action="<?= e($baseUrl) ?>/<?= (int) $photographer->id ?>/status">
                                     <?= csrf_field() ?>
                                     <input type="hidden" name="status"
-                                           value="<?= $customer->isActive() ? Customer::STATUS_INACTIVE : Customer::STATUS_ACTIVE ?>">
+                                           value="<?= $photographer->isActive() ? Photographer::STATUS_INACTIVE : Photographer::STATUS_ACTIVE ?>">
                                     <button type="submit"
-                                            title="<?= $customer->isActive() ? 'Deactivate' : 'Activate' ?>"
-                                            aria-label="<?= $customer->isActive() ? 'Deactivate' : 'Activate' ?> <?= e($customer->name) ?>"
-                                            class="inline-flex h-8 w-8 items-center justify-center rounded-full border transition <?= $customer->isActive()
+                                            title="<?= $photographer->isActive() ? 'Deactivate' : 'Activate' ?>"
+                                            aria-label="<?= $photographer->isActive() ? 'Deactivate' : 'Activate' ?> <?= e($photographer->name) ?>"
+                                            class="inline-flex h-8 w-8 items-center justify-center rounded-full border transition <?= $photographer->isActive()
                                                 ? 'border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
                                                 : 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100' ?>">
                                         <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
@@ -136,8 +136,8 @@ $filters    = [
                                 </form>
 
                                 <?php if ($canDelete): ?>
-                                    <form method="post" action="<?= e($baseUrl) ?>/<?= (int) $customer->id ?>/delete"
-                                          onsubmit="return confirm('Permanently delete <?= e(addslashes($customer->name)) ?>? This cannot be undone.');">
+                                    <form method="post" action="<?= e($baseUrl) ?>/<?= (int) $photographer->id ?>/delete"
+                                          onsubmit="return confirm('Permanently delete <?= e(addslashes($photographer->name)) ?>? This cannot be undone.');">
                                         <?= csrf_field() ?>
                                         <button type="submit"
                                                 class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-50">

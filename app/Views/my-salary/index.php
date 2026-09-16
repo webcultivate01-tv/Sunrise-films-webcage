@@ -120,7 +120,7 @@ use App\Models\SalarySettlement;
                             <div>
                                 <p class="font-medium text-ink"><?= e((string) $credit['task_title']) ?></p>
                                 <p class="text-xs text-slate-500">
-                                    <?= e((string) ($credit['project_name'] ?? 'Unknown project')) ?>
+                                    <?= e((string) ($credit['customer_name'] ?? 'Unknown project')) ?>
                                     &middot; <?= e(pretty_date((string) $credit['credited_at'])) ?>
                                 </p>
                             </div>

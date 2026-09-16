@@ -10,7 +10,8 @@ use App\Models\Task;
  * @var array<string, string> $filters
  * @var string                $baseUrl
  * @var array<string, int>    $counts
- * @var array<int, string>    $projects project_id => name
+ * @var array<int, string>    $projects project_id => customer name
+ * @var array<int, int>       $descriptionCounts task_id => rounds in its thread
  */
 $q         = $filters['q'] ?? '';
 $projectId = $filters['project_id'] ?? '';
@@ -60,7 +61,7 @@ $tabUrl = static function (array $query, string $view) use ($baseUrl): string {
 
     <div class="relative min-w-0 flex-1 sm:max-w-sm" data-suggest data-suggest-url="<?= e($baseUrl) ?>/suggest">
         <input type="search" name="q" value="<?= e($q) ?>"
-               placeholder="Search by task or project"
+               placeholder="Search by task or customer"
                autocomplete="off"
                class="block w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-3.5 text-sm text-ink placeholder:text-slate-400 transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
                data-suggest-input>
@@ -128,7 +129,13 @@ $tabUrl = static function (array $query, string $view) use ($baseUrl): string {
                         <td class="px-5 py-3.5">
                             <a href="<?= e($baseUrl) ?>/<?= (int) $task->id ?>"
                                class="font-medium text-ink underline-offset-2 hover:underline"><?= e($task->title) ?></a>
-                            <p class="text-xs text-slate-500"><?= e($task->projectName ?? 'Unknown project') ?></p>
+                            <p class="text-xs text-slate-500"><?= e($task->customerName ?? 'Unknown customer') ?></p>
+                            <?php if (($descriptionCounts[$task->id] ?? 1) > 1): ?>
+                                <span class="mt-1 inline-flex items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-medium text-brand-700 ring-1 ring-inset ring-brand-600/20">
+                                    <?= (int) ($descriptionCounts[$task->id] - 1) ?> new
+                                    <?= $descriptionCounts[$task->id] === 2 ? 'description' : 'descriptions' ?>
+                                </span>
+                            <?php endif; ?>
                         </td>
                         <td class="px-5 py-3.5">
                             <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset <?= task_priority_badge($task->priority) ?>">

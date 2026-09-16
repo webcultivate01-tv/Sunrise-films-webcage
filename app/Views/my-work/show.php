@@ -1,13 +1,19 @@
 <?php
 
 use App\Models\Task;
+use App\Models\TaskDescription;
 
 /**
  * One of my tasks: full detail plus whichever action its status allows
  * (task spec s5-s8).
  *
- * @var Task   $task
- * @var string $baseUrl
+ * The description is a thread, not a field: whatever the photographer has
+ * sent since this was assigned is listed underneath the original brief, so
+ * the latest instructions never arrive without the ones they amend.
+ *
+ * @var Task                  $task
+ * @var string                $baseUrl
+ * @var list<TaskDescription> $descriptions
  */
 $nextSteps = array_filter(Task::progressSteps(), static fn (int $step): bool => $step > $task->progress);
 ?>
@@ -38,39 +44,46 @@ $nextSteps = array_filter(Task::progressSteps(), static fn (int $step): bool => 
 </div>
 
 <div class="grid gap-5 lg:grid-cols-3">
-    <section class="rounded-2xl border border-line bg-white p-6 shadow-sm sm:p-7 lg:col-span-2">
-        <h2 class="text-base font-semibold text-ink">Description</h2>
-        <p class="mt-3 whitespace-pre-line text-sm text-slate-600"><?= e($task->description) ?></p>
+    <div class="space-y-5 lg:col-span-2">
+        <section class="rounded-2xl border border-line bg-white p-6 shadow-sm sm:p-7">
+            <h2 class="text-base font-semibold text-ink">Task details</h2>
 
-        <dl class="mt-6 grid gap-x-6 gap-y-5 sm:grid-cols-2">
-            <div>
-                <dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Project</dt>
-                <dd class="mt-0.5 text-sm font-medium text-ink"><?= e($task->projectName ?? 'Unknown project') ?></dd>
-            </div>
-            <div>
-                <dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Amount</dt>
-                <dd class="mt-0.5 text-sm font-medium text-ink"><?= e(money($task->amount)) ?></dd>
-            </div>
-            <div>
-                <dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Start date</dt>
-                <dd class="mt-0.5 text-sm font-medium text-ink"><?= e(date('j M Y', strtotime($task->startDate))) ?></dd>
-            </div>
-            <div>
-                <dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">End date / deadline</dt>
-                <dd class="mt-0.5 text-sm font-medium text-ink"><?= e(date('j M Y', strtotime($task->endDate))) ?></dd>
-            </div>
-        </dl>
+            <dl class="mt-6 grid gap-x-6 gap-y-5 sm:grid-cols-2">
+                <div>
+                    <dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Customer</dt>
+                    <dd class="mt-0.5 text-sm font-medium text-ink"><?= e($task->customerName ?? 'Unknown customer') ?></dd>
+                </div>
+                <div>
+                    <dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Photographer</dt>
+                    <dd class="mt-0.5 text-sm font-medium text-ink"><?= e($task->photographerName ?? 'Unknown photographer') ?></dd>
+                </div>
+                <div>
+                    <dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Amount</dt>
+                    <dd class="mt-0.5 text-sm font-medium text-ink"><?= e(money($task->amount)) ?></dd>
+                </div>
+                <div>
+                    <dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Start date</dt>
+                    <dd class="mt-0.5 text-sm font-medium text-ink"><?= e(date('j M Y', strtotime($task->startDate))) ?></dd>
+                </div>
+                <div>
+                    <dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">End date / deadline</dt>
+                    <dd class="mt-0.5 text-sm font-medium text-ink"><?= e(date('j M Y', strtotime($task->endDate))) ?></dd>
+                </div>
+            </dl>
 
-        <div class="mt-6">
-            <div class="flex items-center justify-between text-sm">
-                <span class="font-medium text-ink">Progress</span>
-                <span class="text-slate-500"><?= (int) $task->progress ?>%</span>
+            <div class="mt-6">
+                <div class="flex items-center justify-between text-sm">
+                    <span class="font-medium text-ink">Progress</span>
+                    <span class="text-slate-500"><?= (int) $task->progress ?>%</span>
+                </div>
+                <div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                    <div class="h-full rounded-full bg-brand-500" style="width: <?= (int) $task->progress ?>%"></div>
+                </div>
             </div>
-            <div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100">
-                <div class="h-full rounded-full bg-brand-500" style="width: <?= (int) $task->progress ?>%"></div>
-            </div>
-        </div>
-    </section>
+        </section>
+
+        <?php require BASE_PATH . '/app/Views/partials/description-thread.php'; ?>
+    </div>
 
     <div class="space-y-5">
         <?php if ($task->status === Task::STATUS_ASSIGNED): ?>

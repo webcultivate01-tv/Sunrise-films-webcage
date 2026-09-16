@@ -38,8 +38,8 @@ use App\Models\User;
             <h2 class="text-sm font-semibold text-ink">Carrying over to the new employee</h2>
             <dl class="mt-3 grid gap-3 sm:grid-cols-2">
                 <div>
-                    <dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Project</dt>
-                    <dd class="mt-0.5 text-sm font-medium text-ink"><?= e($task->projectName ?? 'Unknown project') ?></dd>
+                    <dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Customer</dt>
+                    <dd class="mt-0.5 text-sm font-medium text-ink"><?= e($task->customerName ?? 'Unknown customer') ?></dd>
                 </div>
                 <div>
                     <dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Amount</dt>

@@ -87,17 +87,17 @@ final class PaymentService
 
     /**
      * Every project with its collected/outstanding figures and computed
-     * status, narrowed by the search box and a specific customer, but not by
+     * status, narrowed by the search box and a specific photographer, but not by
      * payment status - the raw material for both projectOverview() and
      * dashboardSummary(), which need different slices of it.
      *
      * @return list<array{project: Project, collected: float, outstanding: float, status: string, paymentsCount: int, lastPaymentDate: ?string}>
      */
-    private static function rows(string $search = '', ?int $customerId = null): array
+    private static function rows(string $search = '', ?int $photographerId = null): array
     {
         $rows = [];
 
-        foreach (Project::all($search, '', $customerId) as $project) {
+        foreach (Project::all($search, '', $photographerId) as $project) {
             $collected = Payment::totalForProject($project->id);
 
             $rows[] = [
@@ -116,19 +116,19 @@ final class PaymentService
     /**
      * The Project Payment Overview (module spec s1, s9): every project with
      * its collected/outstanding figures and computed status, narrowed by the
-     * search box, a status filter and a specific customer.
+     * search box, a status filter and a specific photographer.
      *
      * A fully paid project drops out of the default (no status filter) list
-     * once the customer settles it in full - it only reappears when the
+     * once the photographer settles it in full - it only reappears when the
      * admin/manager explicitly filters by the "Fully Paid" status.
      *
      * @return list<array{project: Project, collected: float, outstanding: float, status: string, paymentsCount: int, lastPaymentDate: ?string}>
      */
-    public static function projectOverview(User $actor, string $search = '', string $status = '', ?int $customerId = null): array
+    public static function projectOverview(User $actor, string $search = '', string $status = '', ?int $photographerId = null): array
     {
         self::assertAccess($actor);
 
-        $rows = self::rows($search, $customerId);
+        $rows = self::rows($search, $photographerId);
 
         if (in_array($status, self::statuses(), true)) {
             return array_values(array_filter($rows, static fn (array $row): bool => $row['status'] === $status));
@@ -290,9 +290,9 @@ final class PaymentService
             'collectionPercentage' => $project->totalPayment > 0.0
                 ? min(100.0, $collected / $project->totalPayment * 100)
                 : 0.0,
-            'paymentsCount'        => Payment::countForProject($project->id),
-            'lastPaymentDate'      => Payment::lastPaymentDateForProject($project->id),
-            'timeline'             => Payment::timelineForProject($project->id),
+            'paymentsCount'   => Payment::countForProject($project->id),
+            'lastPaymentDate' => Payment::lastPaymentDateForProject($project->id),
+            'timeline'        => Payment::timelineForProject($project->id),
         ];
     }
 
@@ -351,6 +351,15 @@ final class PaymentService
                         'The payment amount cannot exceed the outstanding balance of %s for this project.',
                         money($outstanding),
                     ));
+                } elseif ($type === Payment::TYPE_FULL && abs((float) $amount - $outstanding) > 0.005) {
+                    // "Full Payment" means the project is settled by this one
+                    // transaction - anything less belongs under one of the
+                    // part-payment types, or the bill would say the project is
+                    // paid off when it is not.
+                    $validator->add('amount', sprintf(
+                        'A full payment has to clear the whole outstanding balance of %s. Pick another payment type to record a part of it.',
+                        money($outstanding),
+                    ));
                 }
             }
         }
@@ -399,6 +408,37 @@ final class PaymentService
     }
 
     /**
+     * The message pre-typed into WhatsApp when an Admin/Manager sends a
+     * receipt on from the bill screen.
+     *
+     * WhatsApp's click-to-chat links cannot carry a file, so the bill itself
+     * is downloaded alongside this and attached by hand - the message says so
+     * rather than leaving the photographer waiting for an attachment that was
+     * never sent.
+     */
+    public static function billWhatsAppMessage(Payment $payment, float $total, float $collected): string
+    {
+        $company     = Setting::current();
+        $outstanding = max(0.0, $total - $collected);
+
+        return implode("\n", [
+            'Hello ' . ($payment->photographerName ?? 'there') . ',',
+            '',
+            'Here is your payment receipt ' . self::billReference($payment) . ' from ' . $company->companyName . '.',
+            '',
+            'Customer: ' . ($payment->customerName ?? '-'),
+            'Payment type: ' . payment_type_label($payment->paymentType),
+            'Payment method: ' . payment_method_label($payment->paymentMethod),
+            'Amount received: ' . money($payment->amount),
+            'Payment date: ' . date('j M Y', strtotime($payment->paymentDate)),
+            'Project total: ' . money($total),
+            'Outstanding balance: ' . money($outstanding),
+            '',
+            'The receipt PDF is attached. Thank you!',
+        ]);
+    }
+
+    /**
      * Build the Bill/Receipt PDF for one payment - the same document whether
      * it is downloaded straight from Work Management (the advance collected
      * when a project is created) or later from Payment Management.
@@ -441,15 +481,15 @@ final class PaymentService
         $pdf->text($right - 160, $y, 'Date: ' . date('j M Y', strtotime($payment->paymentDate)), 10);
         $y -= 30;
 
-        $pdf->text($left, $y, 'Customer', 11, true);
+        $pdf->text($left, $y, 'Photographer', 11, true);
         $y -= 17;
 
-        $customerFields = [
-            'Name'    => $payment->customerName ?? 'Unknown customer',
-            'Project' => $payment->projectName ?? 'Unknown project',
+        $photographerFields = [
+            'Name'     => $payment->photographerName ?? 'Unknown photographer',
+            'Customer' => $payment->customerName ?? 'Unknown customer',
         ];
 
-        foreach ($customerFields as $label => $value) {
+        foreach ($photographerFields as $label => $value) {
             $pdf->text($left, $y, $label . ':', 10, true);
             $pdf->text($left + 120, $y, $value, 10);
             $y -= 16;

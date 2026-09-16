@@ -33,7 +33,7 @@ echo  [4/8] authentication acceptance tests passed
 
 php tests\modules_check.php
 if errorlevel 1 goto fail
-echo  [5/8] customer + employee management acceptance tests passed
+echo  [5/8] photographer + employee management acceptance tests passed
 
 php tests\work_management_check.php
 if errorlevel 1 goto fail

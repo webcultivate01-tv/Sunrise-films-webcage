@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\Customer;
+use App\Models\Photographer;
 use App\Models\Payment;
 use App\Models\Project;
 
@@ -9,7 +9,7 @@ use App\Models\Project;
  *
  * @var Project|null          $project  Null when adding.
  * @var string                $baseUrl
- * @var list<Customer>        $customers
+ * @var list<Photographer>        $photographers
  * @var array<string, string> $errors
  * @var array<string, string> $old
  */
@@ -17,7 +17,7 @@ $isEdit = $project !== null;
 $action = $isEdit ? $baseUrl . '/' . $project->id : $baseUrl;
 $back   = $isEdit ? $baseUrl . '/' . $project->id : $baseUrl;
 
-$selectedCustomer = old($old, 'customer_id', $project !== null ? (string) $project->customerId : '');
+$selectedPhotographer = old($old, 'photographer_id', $project !== null ? (string) $project->photographerId : '');
 ?>
 <div class="mb-5 -mt-4">
     <a href="<?= e($back) ?>"
@@ -29,10 +29,10 @@ $selectedCustomer = old($old, 'customer_id', $project !== null ? (string) $proje
     </a>
     <div class="mt-3">
         <h1 class="text-2xl font-semibold tracking-tight text-ink">
-            <?= $isEdit ? 'Edit ' . e($project->name) : 'Add Project' ?>
+            <?= $isEdit ? 'Edit ' . e($project->customerName) : 'Add Project' ?>
         </h1>
         <p class="mt-0.5 text-sm text-slate-500">
-            <?= $isEdit ? 'Update the details on record for this project.' : 'Register a new project for a customer.' ?>
+            <?= $isEdit ? 'Update the details on record for this project.' : 'Register a new project for a photographer.' ?>
         </p>
     </div>
 </div>
@@ -53,24 +53,25 @@ $selectedCustomer = old($old, 'customer_id', $project !== null ? (string) $proje
 
             <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div>
-                    <label for="field-customer" class="mb-1.5 block text-sm font-medium text-slate-700">Customer</label>
-                    <select id="field-customer" name="customer_id" class="<?= input_classes($errors, 'customer_id') ?>">
-                        <option value="">Select a customer</option>
-                        <?php foreach ($customers as $customer): ?>
-                            <option value="<?= (int) $customer->id ?>" <?= $selectedCustomer === (string) $customer->id ? 'selected' : '' ?>>
-                                <?= e($customer->name) ?>
+                    <label for="field-photographer" class="mb-1.5 block text-sm font-medium text-slate-700">Photographer</label>
+                    <select id="field-photographer" name="photographer_id" class="<?= input_classes($errors, 'photographer_id') ?>">
+                        <option value="">Select a photographer</option>
+                        <?php foreach ($photographers as $photographer): ?>
+                            <option value="<?= (int) $photographer->id ?>" <?= $selectedPhotographer === (string) $photographer->id ? 'selected' : '' ?>>
+                                <?= e($photographer->name) ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
-                    <?= field_error($errors, 'customer_id') ?>
+                    <?= field_error($errors, 'photographer_id') ?>
                 </div>
 
                 <div>
-                    <label for="field-name" class="mb-1.5 block text-sm font-medium text-slate-700">Project name</label>
-                    <input type="text" id="field-name" name="name"
-                           value="<?= old($old, 'name', $project->name ?? '') ?>"
-                           class="<?= input_classes($errors, 'name') ?>" placeholder="Wedding Film - Sharma Family" autofocus>
-                    <?= field_error($errors, 'name') ?>
+                    <label for="field-customer" class="mb-1.5 block text-sm font-medium text-slate-700">Customer name</label>
+                    <input type="text" id="field-customer" name="customer_name"
+                           value="<?= old($old, 'customer_name', $project->customerName ?? '') ?>"
+                           class="<?= input_classes($errors, 'customer_name') ?>" placeholder="Sharma Family - Wedding" autofocus>
+                    <p class="mt-1.5 text-xs text-slate-500">Who the shoot is for - the photographer's own client. This is what identifies the project everywhere.</p>
+                    <?= field_error($errors, 'customer_name') ?>
                 </div>
 
                 <div>
@@ -118,32 +119,50 @@ $selectedCustomer = old($old, 'customer_id', $project !== null ? (string) $proje
                         </svg>
                     </span>
                     <div>
-                        <h2 class="text-base font-semibold text-ink">Advance payment (optional)</h2>
+                        <h2 class="text-base font-semibold text-ink">Payment received (optional)</h2>
                         <p class="mt-0.5 text-xs text-slate-500">
-                            Collected from the customer when the work is assigned. Recorded automatically in Payment
-                            Management and a bill is generated for it as soon as you create the project.
+                            Collected from the photographer when the work is handed over - either an advance against the
+                            total, or the whole amount paid up front. Recorded automatically in Payment Management and a
+                            bill is generated for it as soon as you create the project.
                         </p>
                     </div>
                 </div>
 
-                <div class="mt-4 grid gap-4 sm:grid-cols-2">
+                <div class="mt-4 grid gap-4 sm:grid-cols-3">
                     <div>
-                        <label for="field-advance-amount" class="mb-1.5 block text-sm font-medium text-slate-700">Advance amount (&#8377;)</label>
-                        <input type="number" step="0.01" min="0" id="field-advance-amount" name="advance_amount"
-                               value="<?= old($old, 'advance_amount', '') ?>"
-                               class="<?= input_classes($errors, 'advance_amount') ?> [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                               placeholder="10000.00">
-                        <?= field_error($errors, 'advance_amount') ?>
+                        <label for="field-payment-type" class="mb-1.5 block text-sm font-medium text-slate-700">Payment type</label>
+                        <select id="field-payment-type" name="payment_type" class="<?= input_classes($errors, 'payment_type') ?>">
+                            <option value="">No payment collected yet</option>
+                            <?php foreach (Payment::upfrontTypes() as $type): ?>
+                                <option value="<?= e($type) ?>" <?= old($old, 'payment_type', '') === $type ? 'selected' : '' ?>>
+                                    <?= e(payment_type_label($type)) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <?= field_error($errors, 'payment_type') ?>
                     </div>
 
                     <div>
-                        <label for="field-advance-method" class="mb-1.5 block text-sm font-medium text-slate-700">Payment method</label>
-                        <select id="field-advance-method" name="advance_payment_method" class="<?= input_classes($errors, 'advance_payment_method') ?>">
+                        <label for="field-payment-amount" class="mb-1.5 block text-sm font-medium text-slate-700">Amount received (&#8377;)</label>
+                        <input type="number" step="0.01" min="0" id="field-payment-amount" name="payment_amount"
+                               value="<?= old($old, 'payment_amount', '') ?>"
+                               class="<?= input_classes($errors, 'payment_amount') ?> [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                               placeholder="10000.00">
+                        <p id="payment-amount-hint" class="mt-1.5 text-xs text-slate-500"></p>
+                        <?= field_error($errors, 'payment_amount') ?>
+                    </div>
+
+                    <div>
+                        <label for="field-payment-method" class="mb-1.5 block text-sm font-medium text-slate-700">Payment method</label>
+                        <select id="field-payment-method" name="payment_method" class="<?= input_classes($errors, 'payment_method') ?>">
                             <option value="">Select payment method</option>
-                            <option value="<?= e(Payment::METHOD_CASH) ?>" <?= old($old, 'advance_payment_method', '') === Payment::METHOD_CASH ? 'selected' : '' ?>>Cash</option>
-                            <option value="<?= e(Payment::METHOD_UPI) ?>" <?= old($old, 'advance_payment_method', '') === Payment::METHOD_UPI ? 'selected' : '' ?>>UPI</option>
+                            <?php foreach (Payment::upfrontMethods() as $method): ?>
+                                <option value="<?= e($method) ?>" <?= old($old, 'payment_method', '') === $method ? 'selected' : '' ?>>
+                                    <?= e(payment_method_label($method)) ?>
+                                </option>
+                            <?php endforeach; ?>
                         </select>
-                        <?= field_error($errors, 'advance_payment_method') ?>
+                        <?= field_error($errors, 'payment_method') ?>
                     </div>
                 </div>
             </section>
@@ -161,3 +180,59 @@ $selectedCustomer = old($old, 'customer_id', $project !== null ? (string) $proje
         </div>
     </form>
 </div>
+
+<?php if (!$isEdit): ?>
+<script>
+    /**
+     * Keeps the "Payment received" block honest: a Full Payment is by
+     * definition the whole total payment, so the amount follows the total
+     * field and is locked - the admin cannot accidentally file a part payment
+     * under the wrong type, which the server would refuse anyway. An Advance
+     * Payment is typed in freely.
+     *
+     * A readonly field still submits its value, so the server sees the same
+     * amount the admin was shown.
+     */
+    (function () {
+        var typeField   = document.getElementById('field-payment-type');
+        var amountField = document.getElementById('field-payment-amount');
+        var methodField = document.getElementById('field-payment-method');
+        var totalField  = document.getElementById('field-total');
+        var hint        = document.getElementById('payment-amount-hint');
+
+        if (!typeField || !amountField || !methodField || !totalField || !hint) {
+            return;
+        }
+
+        var lockedClasses = ['bg-slate-50', 'text-slate-500', 'cursor-not-allowed'];
+
+        function total() {
+            var value = parseFloat(totalField.value);
+
+            return isNaN(value) || value < 0 ? 0 : value;
+        }
+
+        function sync() {
+            if (typeField.value === '<?= e(\App\Models\Payment::TYPE_FULL) ?>') {
+                amountField.value = total() > 0 ? total().toFixed(2) : '';
+                amountField.setAttribute('readonly', 'readonly');
+                lockedClasses.forEach(function (name) { amountField.classList.add(name); });
+                hint.textContent = 'The whole total payment, paid up front - this follows the total above.';
+
+                return;
+            }
+
+            amountField.removeAttribute('readonly');
+            lockedClasses.forEach(function (name) { amountField.classList.remove(name); });
+
+            hint.textContent = typeField.value === '<?= e(\App\Models\Payment::TYPE_ADVANCE) ?>'
+                ? 'Part of the total payment, collected now. The rest stays outstanding.'
+                : 'Leave this block alone if nothing has been collected yet.';
+        }
+
+        typeField.addEventListener('change', sync);
+        totalField.addEventListener('input', sync);
+        sync();
+    })();
+</script>
+<?php endif; ?>

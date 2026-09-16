@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS payments (
     id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     project_id      INT UNSIGNED NOT NULL,
     amount          DECIMAL(12,2) NOT NULL,
-    payment_type    ENUM('advance', 'milestone', 'partial', 'final', 'other') NOT NULL DEFAULT 'other',
+    payment_type    ENUM('advance', 'full', 'milestone', 'partial', 'final', 'other') NOT NULL DEFAULT 'other',
     payment_method  ENUM('cash', 'bank_transfer', 'upi', 'cheque', 'card', 'other') NOT NULL DEFAULT 'other',
     reference_no    VARCHAR(60) NULL DEFAULT NULL,
     payment_date    DATE NOT NULL,

@@ -36,16 +36,19 @@ final class MyWorkController extends Controller
         $projects = [];
 
         foreach ($allTasks as $task) {
-            $projects[$task->projectId] = $task->projectName ?? ('Project #' . $task->projectId);
+            $projects[$task->projectId] = $task->customerName ?? ('Project #' . $task->projectId);
         }
 
+        $tasks = TaskService::myWork($user, $filters);
+
         $this->view('my-work.index', [
-            'title'    => 'My Work',
-            'baseUrl'  => $this->baseUrl($user),
-            'tasks'    => TaskService::myWork($user, $filters),
-            'filters'  => $filters,
-            'counts'   => TaskService::myStatusCounts($user),
-            'projects' => $projects,
+            'title'             => 'My Work',
+            'baseUrl'           => $this->baseUrl($user),
+            'tasks'             => $tasks,
+            'filters'           => $filters,
+            'counts'            => TaskService::myStatusCounts($user),
+            'projects'          => $projects,
+            'descriptionCounts' => TaskService::descriptionCounts($tasks),
         ], 'panel');
     }
 
@@ -64,7 +67,7 @@ final class MyWorkController extends Controller
             static fn (Task $task): array => [
                 'id'   => $task->id,
                 'name' => $task->title,
-                'sub'  => $task->projectName ?? 'Unknown project',
+                'sub'  => $task->customerName ?? 'Unknown customer',
                 'url'  => $base . '/' . $task->id,
             ],
             TaskService::suggestForEmployee($user, $search),
@@ -84,9 +87,10 @@ final class MyWorkController extends Controller
         $task = TaskService::findForEmployee($user, (int) $params['id']);
 
         $this->view('my-work.show', [
-            'title'   => $task->title,
-            'baseUrl' => $this->baseUrl($user),
-            'task'    => $task,
+            'title'        => $task->title,
+            'baseUrl'      => $this->baseUrl($user),
+            'task'         => $task,
+            'descriptions' => TaskService::descriptionsForEmployee($user, $task),
         ], 'panel');
     }
 

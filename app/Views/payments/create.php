@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\Customer;
+use App\Models\Photographer;
 use App\Models\Payment;
 use App\Models\Project;
 
@@ -10,18 +10,18 @@ use App\Models\Project;
  *
  * @var string           $baseUrl
  * @var list<Project>    $projects
- * @var list<Customer>   $customers
+ * @var list<Photographer>   $photographers
  * @var array<int, array{total: float, collected: float, outstanding: float}> $projectSummary
  * @var int|null         $preselectedId
  * @var array<string, string> $errors
  * @var array<string, string> $old
  */
 $selectedProject = old($old, 'project_id', $preselectedId !== null ? (string) $preselectedId : '');
-$selectedCustomer = '';
+$selectedPhotographer = '';
 
 foreach ($projects as $project) {
     if ((string) $project->id === $selectedProject) {
-        $selectedCustomer = (string) $project->customerId;
+        $selectedPhotographer = (string) $project->photographerId;
 
         break;
     }
@@ -59,13 +59,13 @@ $back            = $preselectedId !== null ? $baseUrl . '/history?project_id=' .
 
             <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div>
-                    <label for="field-customer" class="mb-1.5 block text-sm font-medium text-slate-700">Customer</label>
-                    <select id="field-customer" data-payment-customer-filter
+                    <label for="field-photographer" class="mb-1.5 block text-sm font-medium text-slate-700">Photographer</label>
+                    <select id="field-photographer" data-payment-photographer-filter
                             class="<?= input_classes($errors, 'project_id') ?>">
-                        <option value="">Select a customer</option>
-                        <?php foreach ($customers as $customer): ?>
-                            <option value="<?= (int) $customer->id ?>" <?= $selectedCustomer === (string) $customer->id ? 'selected' : '' ?>>
-                                <?= e($customer->name) ?>
+                        <option value="">Select a photographer</option>
+                        <?php foreach ($photographers as $photographer): ?>
+                            <option value="<?= (int) $photographer->id ?>" <?= $selectedPhotographer === (string) $photographer->id ? 'selected' : '' ?>>
+                                <?= e($photographer->name) ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -80,12 +80,12 @@ $back            = $preselectedId !== null ? $baseUrl . '/history?project_id=' .
                         <?php foreach ($projects as $project): ?>
                             <?php $summary = $projectSummary[$project->id] ?? ['total' => $project->totalPayment, 'collected' => 0.0, 'outstanding' => $project->totalPayment]; ?>
                             <option value="<?= (int) $project->id ?>"
-                                    data-customer="<?= (int) $project->customerId ?>"
+                                    data-photographer="<?= (int) $project->photographerId ?>"
                                     data-total="<?= e(number_format($summary['total'], 2, '.', '')) ?>"
                                     data-collected="<?= e(number_format($summary['collected'], 2, '.', '')) ?>"
                                     data-outstanding="<?= e(number_format($summary['outstanding'], 2, '.', '')) ?>"
                                     <?= $selectedProject === (string) $project->id ? 'selected' : '' ?>>
-                                <?= e($project->name) ?> - <?= e($project->customerName ?? 'Unknown customer') ?> (Total <?= e(money($project->totalPayment)) ?>)
+                                <?= e($project->customerName) ?> - <?= e($project->photographerName ?? 'Unknown photographer') ?> (Total <?= e(money($project->totalPayment)) ?>)
                             </option>
                         <?php endforeach; ?>
                     </select>

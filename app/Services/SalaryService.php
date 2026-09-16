@@ -376,7 +376,7 @@ final class SalaryService
                     'amount'       => (float) $row['amount'],
                     'reference'    => null,
                     'settlementId' => null,
-                    'detail'       => (string) $row['task_title'] . ' - ' . (string) ($row['project_name'] ?? 'Unknown project'),
+                    'detail'       => (string) $row['task_title'] . ' - ' . (string) ($row['customer_name'] ?? 'Unknown customer'),
                 ];
             }
         }

@@ -20,8 +20,8 @@ use App\Services\PaymentService;
 $status = $project !== null ? PaymentService::statusFor($project, $collectedAfter) : null;
 
 $fields = [
-    ['label' => 'Client', 'value' => $payment->customerName ?? 'Unknown customer'],
-    ['label' => 'Project', 'value' => $payment->projectName ?? 'Unknown project'],
+    ['label' => 'Client', 'value' => $payment->photographerName ?? 'Unknown photographer'],
+    ['label' => 'Customer', 'value' => $payment->customerName ?? 'Unknown customer'],
     ['label' => 'Amount', 'value' => money($payment->amount)],
     ['label' => 'Payment type', 'value' => payment_type_label($payment->paymentType)],
     ['label' => 'Payment date', 'value' => date('j M Y', strtotime($payment->paymentDate))],
@@ -43,7 +43,7 @@ $fields = [
         <div class="mt-4">
             <h1 class="text-2xl font-semibold tracking-tight text-ink"><?= e(money($payment->amount)) ?></h1>
             <p class="mt-1 text-sm text-slate-500">
-                <?= e(payment_type_label($payment->paymentType)) ?> for <?= e($payment->projectName ?? 'Unknown project') ?>
+                <?= e(payment_type_label($payment->paymentType)) ?> for <?= e($payment->customerName ?? 'Unknown customer') ?>
             </p>
         </div>
     </div>

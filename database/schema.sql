@@ -14,15 +14,16 @@ CREATE DATABASE IF NOT EXISTS sunrise_films
 USE sunrise_films;
 
 -- Order matters: a table that has a FOREIGN KEY must load after the table
--- it points to (e.g. customers points to users, so users loads first).
+-- it points to (e.g. photographers points to users, so users loads first).
 SOURCE database/schema/01_users.sql;
-SOURCE database/schema/02_customers.sql;
+SOURCE database/schema/02_photographers.sql;
 SOURCE database/schema/03_projects.sql;
 SOURCE database/schema/04_auth_tokens.sql;
 SOURCE database/schema/05_password_resets.sql;
 SOURCE database/schema/06_login_attempts.sql;
 SOURCE database/schema/07_tasks.sql;
 SOURCE database/schema/08_task_salary_credits.sql;
+SOURCE database/schema/09_task_descriptions.sql;
 SOURCE database/schema/10_settings.sql;
 SOURCE database/schema/11_salary_settlements.sql;
 SOURCE database/schema/12_payments.sql;

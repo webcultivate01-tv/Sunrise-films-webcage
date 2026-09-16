@@ -6,7 +6,7 @@ namespace App\Services;
 
 use App\Core\Exceptions\HttpException;
 use App\Core\Validator;
-use App\Models\Customer;
+use App\Models\Photographer;
 use App\Models\Payment;
 use App\Models\Project;
 use App\Models\Setting;
@@ -16,7 +16,7 @@ use App\Support\SimplePdf;
 
 /**
  * Work Management. Admins and Managers share full reach over the project
- * list, the same shape as Customer Management: both may register, view, edit
+ * list, the same shape as Photographer Management: both may register, view, edit
  * and change the status of any project; only an Admin may delete one outright.
  *
  * Employees have no access to this module.
@@ -42,7 +42,7 @@ final class ProjectService
 
     /**
      * The project list, narrowed by the search box, the status filter and a
-     * specific customer.
+     * specific photographer.
      *
      * A completed project drops out of the default (no status filter) list
      * the moment every task on it is done - the same way a fully paid
@@ -51,7 +51,7 @@ final class ProjectService
      *
      * @return list<Project>
      */
-    public static function list(User $actor, string $search = '', string $status = '', ?int $customerId = null, string $sort = ''): array
+    public static function list(User $actor, string $search = '', string $status = '', ?int $photographerId = null, string $sort = ''): array
     {
         self::assertAccess($actor);
 
@@ -59,7 +59,7 @@ final class ProjectService
             $status = '';
         }
 
-        $projects = Project::all($search, $status, $customerId, $sort);
+        $projects = Project::all($search, $status, $photographerId, $sort);
 
         if ($status !== '') {
             return $projects;
@@ -105,21 +105,21 @@ final class ProjectService
     {
         $validator = new Validator();
 
-        $customerId  = trim($input['customer_id'] ?? '');
-        $name        = trim($input['name'] ?? '');
-        $description = trim($input['description'] ?? '');
-        $folderName  = trim($input['folder_name'] ?? '');
-        $deadline    = trim($input['deadline'] ?? '');
-        $total       = trim($input['total_payment'] ?? '');
+        $photographerId = trim($input['photographer_id'] ?? '');
+        $customerName   = trim($input['customer_name'] ?? '');
+        $description    = trim($input['description'] ?? '');
+        $folderName     = trim($input['folder_name'] ?? '');
+        $deadline       = trim($input['deadline'] ?? '');
+        $total          = trim($input['total_payment'] ?? '');
 
-        $validator->require('customer_id', $customerId, 'Please select a customer.');
+        $validator->require('photographer_id', $photographerId, 'Please select a photographer.');
 
-        if ($customerId !== '' && Customer::findById((int) $customerId) === null) {
-            $validator->add('customer_id', 'That customer could not be found.');
+        if ($photographerId !== '' && Photographer::findById((int) $photographerId) === null) {
+            $validator->add('photographer_id', 'That photographer could not be found.');
         }
 
-        $validator->require('name', $name, 'Please enter the project name.');
-        $validator->maxLength('name', $name, 150, 'Name must be 150 characters or fewer.');
+        $validator->require('customer_name', $customerName, 'Please enter the customer name.');
+        $validator->maxLength('customer_name', $customerName, 150, 'Customer name must be 150 characters or fewer.');
 
         $validator->require('description', $description, 'Please enter a project description.');
 
@@ -132,43 +132,100 @@ final class ProjectService
         $validator->require('total_payment', $total, 'Please enter the total payment.');
         $validator->decimal('total_payment', $total, 'Please enter a valid total payment amount.');
 
-        // The advance payment fields only apply when registering a new
-        // project - editing an existing one never touches its payments.
+        // The payment fields only apply when registering a new project -
+        // editing an existing one never touches its payments.
         if ($existing === null) {
-            $advanceAmount = trim($input['advance_amount'] ?? '');
-            $advanceMethod = trim($input['advance_payment_method'] ?? '');
-
-            if ($advanceAmount !== '') {
-                $validator->decimal('advance_amount', $advanceAmount, 'Please enter a valid advance amount.');
-
-                if (!array_key_exists('advance_amount', $validator->errors())) {
-                    if ((float) $advanceAmount < 0) {
-                        $validator->add('advance_amount', 'The advance amount cannot be negative.');
-                    } elseif (
-                        $total !== ''
-                        && !array_key_exists('total_payment', $validator->errors())
-                        && (float) $advanceAmount > (float) $total + 0.005
-                    ) {
-                        $validator->add('advance_amount', 'The advance amount cannot exceed the total payment.');
-                    }
-                }
-
-                if ((float) $advanceAmount > 0) {
-                    $validator->require('advance_payment_method', $advanceMethod, 'Please select how the advance was paid.');
-
-                    if ($advanceMethod !== '') {
-                        $validator->in(
-                            'advance_payment_method',
-                            $advanceMethod,
-                            [Payment::METHOD_CASH, Payment::METHOD_UPI],
-                            'That payment method is not recognised.',
-                        );
-                    }
-                }
-            }
+            self::validateUpfrontPayment($validator, $input, $total);
         }
 
         return $validator;
+    }
+
+    /**
+     * Validate the money collected with the project itself - the optional
+     * "Payment received" block on the Add Project form.
+     *
+     * The photographer either pays part of the total now (Advance Payment) or
+     * settles the whole thing up front (Full Payment), so the two must agree
+     * with each other and with the project's total: a "full" payment that is
+     * not the whole total, or an "advance" that is, are both refused rather
+     * than quietly recorded under the wrong type - the bill that comes out of
+     * this is a permanent record and cannot be edited afterwards.
+     *
+     * @param array<string, string> $input
+     * @param string                $total The raw total_payment input.
+     */
+    private static function validateUpfrontPayment(Validator $validator, array $input, string $total): void
+    {
+        $amount = trim($input['payment_amount'] ?? '');
+        $type   = trim($input['payment_type'] ?? '');
+        $method = trim($input['payment_method'] ?? '');
+
+        if ($amount === '' && $type === '' && $method === '') {
+            return; // No payment collected now - the whole block is optional.
+        }
+
+        if ($type !== '') {
+            $validator->in(
+                'payment_type',
+                $type,
+                Payment::upfrontTypes(),
+                'Please choose either Advance Payment or Full Payment.',
+            );
+        }
+
+        // decimal() only accepts an unsigned amount, so a negative figure is
+        // already refused here as "not a valid payment amount".
+        $validator->decimal('payment_amount', $amount, 'Please enter a valid payment amount.');
+
+        $amountIsValid = $amount !== '' && !array_key_exists('payment_amount', $validator->errors());
+        $paid          = $amountIsValid ? (float) $amount : 0.0;
+
+        if ($type !== '' && $amount === '') {
+            $validator->add('payment_amount', 'Please enter the amount received, or leave the payment type blank.');
+        }
+
+        if ($paid <= 0.0) {
+            // Nothing actually changed hands, so there is nothing further to
+            // check - and nothing will be recorded either.
+            if ($amountIsValid && $paid === 0.0 && ($type !== '' || $method !== '')) {
+                $validator->add('payment_amount', 'Please enter the amount received, or clear the payment type and method.');
+            }
+
+            return;
+        }
+
+        $validator->require('payment_type', $type, 'Please choose whether this is an advance payment or the full payment.');
+        $validator->require('payment_method', $method, 'Please select how the payment was received.');
+
+        if ($method !== '') {
+            $validator->in('payment_method', $method, Payment::upfrontMethods(), 'That payment method is not recognised.');
+        }
+
+        // Everything below compares the payment against the project's total,
+        // which is only meaningful once the total itself is a valid number.
+        if ($total === '' || array_key_exists('total_payment', $validator->errors())) {
+            return;
+        }
+
+        $totalValue = (float) $total;
+
+        if ($type === Payment::TYPE_FULL && abs($paid - $totalValue) > 0.005) {
+            $validator->add('payment_amount', sprintf(
+                'A full payment has to be the whole total payment of %s. Choose Advance Payment to record a part of it.',
+                money($totalValue),
+            ));
+
+            return;
+        }
+
+        if ($type === Payment::TYPE_ADVANCE) {
+            if ($paid > $totalValue + 0.005) {
+                $validator->add('payment_amount', 'The advance amount cannot exceed the total payment.');
+            } elseif (abs($paid - $totalValue) <= 0.005) {
+                $validator->add('payment_type', 'That is the whole total payment - choose Full Payment instead.');
+            }
+        }
     }
 
     /**
@@ -179,8 +236,8 @@ final class ProjectService
         self::assertAccess($actor);
 
         $id = Project::create(
-            customerId:     (int) $input['customer_id'],
-            name:           trim($input['name']),
+            photographerId: (int) $input['photographer_id'],
+            customerName:   trim($input['customer_name']),
             description:    trim($input['description']),
             folderName:     trim($input['folder_name']),
             deadline:       trim($input['deadline']),
@@ -201,8 +258,8 @@ final class ProjectService
 
         Project::update(
             $project->id,
-            (int) $input['customer_id'],
-            trim($input['name']),
+            (int) $input['photographer_id'],
+            trim($input['customer_name']),
             trim($input['description']),
             trim($input['folder_name']),
             trim($input['deadline']),
@@ -292,17 +349,44 @@ final class ProjectService
     }
 
     /**
+     * The message pre-typed into WhatsApp when an Admin/Manager sends a
+     * project invoice on from the bill screen. See
+     * PaymentService::billWhatsAppMessage() on why the PDF travels separately.
+     *
+     * @param array{collected: float, outstanding: float, status: string, ...} $summary
+     */
+    public static function billWhatsAppMessage(Project $project, array $summary): string
+    {
+        $company = Setting::current();
+
+        return implode("\n", [
+            'Hello ' . ($project->photographerName ?? 'there') . ',',
+            '',
+            'Here is invoice ' . self::billReference($project) . ' from ' . $company->companyName . '.',
+            '',
+            'Customer: ' . $project->customerName,
+            'Deadline: ' . date('j M Y', strtotime($project->deadline)),
+            'Total project value: ' . money($project->totalPayment),
+            'Total received: ' . money($summary['collected']),
+            'Balance due: ' . money($summary['outstanding']),
+            'Payment status: ' . payment_status_label($summary['status']),
+            '',
+            'The invoice PDF is attached. Thank you!',
+        ]);
+    }
+
+    /**
      * Build the project Invoice/Bill PDF: the project's full picture - value,
      * every payment collected against it, and what remains outstanding - not
      * just a single transaction the way a payment receipt is.
      */
     public static function generateBillPdf(Project $project): string
     {
-        $customer  = Customer::findById($project->customerId);
-        $company   = Setting::current();
-        $timeline  = Payment::timelineForProject($project->id);
-        $collected = Payment::totalForProject($project->id);
-        $reference = self::billReference($project);
+        $photographer = Photographer::findById($project->photographerId);
+        $company      = Setting::current();
+        $timeline     = Payment::timelineForProject($project->id);
+        $collected    = Payment::totalForProject($project->id);
+        $reference    = self::billReference($project);
 
         $pdf     = new SimplePdf();
         $left    = 50.0;
@@ -334,14 +418,14 @@ final class ProjectService
         $pdf->text($left, $y, 'Bill To', 11, true);
         $y -= 17;
 
-        $customerFields = [
-            'Customer' => $customer?->name ?? 'Unknown customer',
-            'Phone'    => $customer?->phone ?? '-',
-            'Email'    => $customer?->email ?? '-',
-            'Address'  => $customer?->address ?? '-',
+        $photographerFields = [
+            'Photographer' => $photographer?->name ?? 'Unknown photographer',
+            'Phone'        => $photographer?->phone ?? '-',
+            'Email'        => $photographer?->email ?? '-',
+            'Address'      => $photographer?->address ?? '-',
         ];
 
-        foreach ($customerFields as $label => $value) {
+        foreach ($photographerFields as $label => $value) {
             $pdf->text($left, $y, $label . ':', 10, true);
             $pdf->text($left + 100, $y, $value, 10);
             $y -= 16;
@@ -355,10 +439,10 @@ final class ProjectService
         $y -= 17;
 
         $projectFields = [
-            'Project name' => $project->name,
-            'Folder'       => $project->folderName,
-            'Deadline'     => date('j M Y', strtotime($project->deadline)),
-            'Status'       => project_status_label($project->status),
+            'Customer' => $project->customerName,
+            'Folder'   => $project->folderName,
+            'Deadline' => date('j M Y', strtotime($project->deadline)),
+            'Status'   => project_status_label($project->status),
         ];
 
         foreach ($projectFields as $label => $value) {

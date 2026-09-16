@@ -1,42 +1,30 @@
 <?php
 
-use App\Models\Customer;
+use App\Models\Photographer;
 use App\Models\Payment;
 use App\Models\Project;
 use App\Models\Setting;
 
 /**
  * Project Invoice/Bill - a full, printable statement for one project: the
- * company header, the customer and project it is billed to, the project's
+ * company header, the photographer and project it is billed to, the project's
  * value, every payment collected against it and what remains outstanding.
  * Rendered inside the bare "invoice" layout (no sidebar) so it prints clean.
  *
  * @var Project      $project
- * @var Customer|null $customer
+ * @var Photographer|null $photographer
  * @var string       $baseUrl
  * @var string       $reference
  * @var array{totalValue: float, collected: float, outstanding: float, status: string, collectionPercentage: float, paymentsCount: int, lastPaymentDate: ?string, timeline: list<Payment>} $summary
  * @var string       $backUrl
  * @var string       $downloadUrl
+ * @var ?string      $whatsappUrl
+ * @var ?string      $whatsappName
  */
-$company = Setting::current();
+$company   = Setting::current();
+$backLabel = 'Back to project';
 ?>
-<div class="mb-6 flex flex-wrap items-center justify-between gap-4 print:hidden">
-    <a href="<?= e($backUrl) ?>" class="text-sm font-medium text-slate-500 underline-offset-2 hover:underline">&larr; Back to project</a>
-    <div class="flex items-center gap-2">
-        <button type="button" onclick="window.print()"
-                class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
-            Print
-        </button>
-        <a href="<?= e($downloadUrl) ?>"
-           class="inline-flex items-center gap-2 rounded-lg bg-brand-gradient px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-110">
-            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/>
-            </svg>
-            Download PDF
-        </a>
-    </div>
-</div>
+<?php require BASE_PATH . '/app/Views/partials/bill-actions.php'; ?>
 
 <div class="invoice-card overflow-hidden rounded-2xl border-2 border-ink/20 bg-white shadow-sm">
     <!-- ============ Header banner ============ -->
@@ -62,16 +50,16 @@ $company = Setting::current();
     <div class="grid gap-6 border-b border-line px-8 py-6 sm:grid-cols-2">
         <div>
             <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Bill To</p>
-            <p class="mt-2 text-sm font-semibold text-ink"><?= e($customer?->name ?? 'Unknown customer') ?></p>
-            <?php if ($customer !== null): ?>
-                <p class="mt-1 text-sm text-slate-600"><?= e($customer->phone) ?></p>
-                <p class="text-sm text-slate-600"><?= e($customer->email) ?></p>
-                <p class="text-sm text-slate-600"><?= e($customer->address) ?></p>
+            <p class="mt-2 text-sm font-semibold text-ink"><?= e($photographer?->name ?? 'Unknown photographer') ?></p>
+            <?php if ($photographer !== null): ?>
+                <p class="mt-1 text-sm text-slate-600"><?= e($photographer->phone) ?></p>
+                <p class="text-sm text-slate-600"><?= e($photographer->email) ?></p>
+                <p class="text-sm text-slate-600"><?= e($photographer->address) ?></p>
             <?php endif; ?>
         </div>
         <div>
-            <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Project</p>
-            <p class="mt-2 text-sm font-semibold text-ink"><?= e($project->name) ?></p>
+            <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Customer</p>
+            <p class="mt-2 text-sm font-semibold text-ink"><?= e($project->customerName) ?></p>
             <p class="mt-1 text-sm text-slate-600">Folder: <?= e($project->folderName) ?></p>
             <p class="text-sm text-slate-600">Deadline: <?= e(date('j M Y', strtotime($project->deadline))) ?></p>
             <p class="mt-1.5">
@@ -96,7 +84,7 @@ $company = Setting::current();
             <tbody>
                 <tr class="border-b border-line">
                     <td class="py-4 pl-4">
-                        <p class="font-medium text-ink"><?= e($project->name) ?></p>
+                        <p class="font-medium text-ink"><?= e($project->customerName) ?></p>
                         <p class="mt-0.5 whitespace-pre-line text-xs text-slate-500"><?= e($project->description) ?></p>
                     </td>
                     <td class="py-4 text-center text-slate-600">1</td>

@@ -59,7 +59,7 @@ $hasFilters = $q !== '' || $projectId !== '' || $employeeId !== '' || $priority 
                 <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                     <tr>
                         <th scope="col" class="px-5 py-3 font-medium">Task</th>
-                        <th scope="col" class="px-5 py-3 font-medium">Project</th>
+                        <th scope="col" class="px-5 py-3 font-medium">Customer</th>
                         <th scope="col" class="px-5 py-3 font-medium">Previous employee</th>
                         <th scope="col" class="px-5 py-3 font-medium">Amount</th>
                         <th scope="col" class="px-5 py-3 font-medium">Priority</th>
@@ -73,7 +73,7 @@ $hasFilters = $q !== '' || $projectId !== '' || $employeeId !== '' || $priority 
                                 <a href="<?= e($baseUrl) ?>/<?= (int) $task->id ?>"
                                    class="font-medium text-ink underline-offset-2 hover:underline"><?= e($task->title) ?></a>
                             </td>
-                            <td class="px-5 py-3.5 text-slate-600"><?= e($task->projectName ?? 'Unknown project') ?></td>
+                            <td class="px-5 py-3.5 text-slate-600"><?= e($task->customerName ?? 'Unknown customer') ?></td>
                             <td class="px-5 py-3.5 text-slate-600"><?= e($task->employeeName ?? 'Unknown employee') ?></td>
                             <td class="px-5 py-3.5 text-slate-600"><?= e(money($task->amount)) ?></td>
                             <td class="px-5 py-3.5">
@@ -98,7 +98,7 @@ $hasFilters = $q !== '' || $projectId !== '' || $employeeId !== '' || $priority 
 <form method="get" action="<?= e($baseUrl) ?>" class="mb-5 flex flex-wrap items-center gap-3">
     <div class="relative min-w-0 flex-1 sm:max-w-sm" data-suggest data-suggest-url="<?= e($baseUrl) ?>/suggest">
         <input type="search" name="q" value="<?= e($q) ?>"
-               placeholder="Search by task, project or employee"
+               placeholder="Search by task, customer or employee"
                autocomplete="off"
                class="block w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-3.5 text-sm text-ink placeholder:text-slate-400 transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
                data-suggest-input>
@@ -113,7 +113,7 @@ $hasFilters = $q !== '' || $projectId !== '' || $employeeId !== '' || $priority 
     <select name="project_id" class="rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-ink transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200">
         <option value="">All projects</option>
         <?php foreach ($projects as $project): ?>
-            <option value="<?= (int) $project->id ?>" <?= $projectId === (string) $project->id ? 'selected' : '' ?>><?= e($project->name) ?></option>
+            <option value="<?= (int) $project->id ?>" <?= $projectId === (string) $project->id ? 'selected' : '' ?>><?= e($project->customerName) ?> - <?= e($project->photographerName ?? 'Unknown photographer') ?></option>
         <?php endforeach; ?>
     </select>
 
@@ -191,7 +191,7 @@ $hasFilters = $q !== '' || $projectId !== '' || $employeeId !== '' || $priority 
                         <td class="px-5 py-3.5">
                             <a href="<?= e($baseUrl) ?>/<?= (int) $task->id ?>"
                                class="font-medium text-ink underline-offset-2 hover:underline"><?= e($task->title) ?></a>
-                            <p class="text-xs text-slate-500"><?= e($task->projectName ?? 'Unknown project') ?></p>
+                            <p class="text-xs text-slate-500"><?= e($task->customerName ?? 'Unknown customer') ?></p>
                         </td>
                         <td class="px-5 py-3.5 text-slate-600"><?= e($task->employeeName ?? 'Unknown employee') ?></td>
                         <td class="px-5 py-3.5">

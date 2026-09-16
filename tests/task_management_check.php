@@ -8,7 +8,7 @@ declare(strict_types=1);
  *
  * It creates a throwaway Manager, three Employees (two under that Manager,
  * one under the Admin directly, to prove the Manager's reach now matches the
- * Admin's), a Customer and a Project, then exercises assignment, acceptance,
+ * Admin's), a Photographer and a Project, then exercises assignment, acceptance,
  * 10% progress steps, completion, salary crediting, exit and reassignment -
  * then deletes everything it created.
  *
@@ -16,12 +16,13 @@ declare(strict_types=1);
  */
 
 use App\Core\Database;
-use App\Models\Customer;
+use App\Models\Photographer;
 use App\Models\Project;
 use App\Models\Task;
+use App\Models\TaskDescription;
 use App\Models\TaskSalaryCredit;
 use App\Models\User;
-use App\Services\CustomerService;
+use App\Services\PhotographerService;
 use App\Services\PasswordPolicy;
 use App\Services\ProjectService;
 use App\Services\TaskService;
@@ -68,12 +69,12 @@ $managerEmail  = 'tm-manager-' . $suffix . '@sunrisefilms.test';
 $employee1Mail = 'tm-employee1-' . $suffix . '@sunrisefilms.test';
 $employee2Mail = 'tm-employee2-' . $suffix . '@sunrisefilms.test';
 $employee3Mail = 'tm-employee3-' . $suffix . '@sunrisefilms.test';
-$customerEmail = 'tm-customer-' . $suffix . '@sunrisefilms.test';
+$photographerEmail = 'tm-photographer-' . $suffix . '@sunrisefilms.test';
 
 /** @var list<int> $userIds */
 $userIds = [];
-/** @var list<int> $customerIds */
-$customerIds = [];
+/** @var list<int> $photographerIds */
+$photographerIds = [];
 /** @var list<int> $projectIds */
 $projectIds = [];
 /** @var list<int> $taskIds */
@@ -119,15 +120,15 @@ try {
     ]);
     $userIds[] = $employee3->id;
 
-    $customer = CustomerService::create($admin, [
-        'name' => 'Task Mgmt Customer', 'email' => $customerEmail, 'phone' => '+91 99999 66666',
+    $photographer = PhotographerService::create($admin, [
+        'name' => 'Task Mgmt Photographer', 'email' => $photographerEmail, 'phone' => '+91 99999 66666',
         'address' => '5 Koramangala, Bengaluru 560034',
     ]);
-    $customerIds[] = $customer->id;
+    $photographerIds[] = $photographer->id;
 
     $project = ProjectService::create($admin, [
-        'customer_id' => (string) $customer->id, 'name' => 'Task Mgmt Project',
-        'description' => 'A project to hang tasks off of.', 'folder_name' => 'TMCustomer_Project_2026',
+        'photographer_id' => (string) $photographer->id, 'customer_name' => 'Task Mgmt Customer',
+        'description' => 'A project to hang tasks off of.', 'folder_name' => 'TMPhotographer_Project_2026',
         'deadline' => '2026-12-31', 'total_payment' => '100000',
     ]);
     $projectIds[] = $project->id;
@@ -209,6 +210,43 @@ try {
     check('accepting twice is refused', refused(static fn () => TaskService::accept($employee1, $task)));
 
     // -----------------------------------------------------------------------
+    echo PHP_EOL . 'Task Management - the description thread' . PHP_EOL;
+
+    $thread = TaskService::descriptions($manager, $task);
+
+    check('a new task opens its own description thread', count($thread) === 1);
+    check('the opening round is the task description', $thread[0]->body === 'Cut the raw footage down to a rough edit.');
+    check('the opening round records who wrote it', $thread[0]->createdBy === $manager->id);
+
+    check('an empty description is refused', array_key_exists(
+        'body',
+        TaskService::validateDescription(['body' => '   '])->errors(),
+    ));
+
+    TaskService::addDescription($manager, $task, ['body' => 'Client wants the drone shots in as well.']);
+    TaskService::addDescription($admin, $task, ['body' => 'And keep the interview audio clean.']);
+
+    $thread = TaskService::descriptions($manager, $task);
+
+    check('later rounds are appended, not overwritten', count($thread) === 3);
+    check('the thread stays in the order it was sent', $thread[0]->body === 'Cut the raw footage down to a rough edit.'
+        && $thread[1]->body === 'Client wants the drone shots in as well.'
+        && $thread[2]->body === 'And keep the interview audio clean.');
+    check('the original description is never rewritten',
+        Task::findById($task->id)?->description === 'Cut the raw footage down to a rough edit.');
+
+    check('the assigned employee reads the whole thread', count(TaskService::descriptionsForEmployee($employee1, $task)) === 3);
+    check('another employee cannot read the thread', refused(
+        static fn () => TaskService::descriptionsForEmployee($employee2, $task),
+    ));
+    check('an employee cannot add to the thread', refused(
+        static fn () => TaskService::addDescription($employee1, $task, ['body' => 'Not mine to send.']),
+    ));
+
+    check('the thread count is reported for the task lists',
+        (TaskService::descriptionCounts([$task]))[$task->id] === 3);
+
+    // -----------------------------------------------------------------------
     echo PHP_EOL . 'Task Management - progress in 10% steps' . PHP_EOL;
 
     check('an invalid percentage is refused', refused(static fn () => TaskService::updateProgress($employee1, $task, 15)));
@@ -247,7 +285,6 @@ try {
     )['total'] ?? 0);
 
     check('a repeated credit for the same task never duplicates', $creditCountBefore === 1 && $creditCountAfter === 1);
-
     // -----------------------------------------------------------------------
     echo PHP_EOL . 'Task Management - exit and reassignment' . PHP_EOL;
 
@@ -301,6 +338,16 @@ try {
     ), true));
     check('the amount and title carried over to the reassigned task', $reassigned->amount === $exitTask->amount
         && $reassigned->title === $exitTask->title);
+    check('the description thread carried over to the reassigned task', array_map(
+        static fn (TaskDescription $d): string => $d->body,
+        TaskService::descriptions($manager, $reassigned),
+    ) === array_map(
+        static fn (TaskDescription $d): string => $d->body,
+        TaskService::descriptions($manager, Task::findById($exitTask->id)),
+    ));
+    check('a closed task takes no further instructions', refused(
+        static fn () => TaskService::addDescription($manager, Task::findById($exitTask->id), ['body' => 'Too late.']),
+    ));
 
     // -----------------------------------------------------------------------
     echo PHP_EOL . 'Task Management - manager reach on the task list (widened to match admin)' . PHP_EOL;
@@ -344,8 +391,8 @@ try {
         Database::statement('DELETE FROM projects WHERE id = ?', [$id]);
     }
 
-    foreach ($customerIds as $id) {
-        Database::statement('DELETE FROM customers WHERE id = ?', [$id]);
+    foreach ($photographerIds as $id) {
+        Database::statement('DELETE FROM photographers WHERE id = ?', [$id]);
     }
 
     foreach (array_reverse($userIds) as $id) {

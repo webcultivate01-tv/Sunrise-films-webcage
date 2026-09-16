@@ -218,6 +218,21 @@ function project_status_label(string $status): string
 }
 
 /**
+ * How a project is named wherever it has to be shown as one line - in a
+ * dropdown, a report row or a filter caption.
+ *
+ * A project has no name column of its own: it is the shoot a photographer
+ * gave us for one of their own customers, so it reads "customer - folder",
+ * which is what makes two projects from the same photographer tellable apart.
+ */
+function project_title(\App\Models\Project $project): string
+{
+    $folder = trim($project->folderName);
+
+    return $folder === '' ? $project->customerName : $project->customerName . ' - ' . $folder;
+}
+
+/**
  * Badge classes for a task's status.
  */
 function task_status_badge(string $status): string
@@ -358,7 +373,8 @@ function payment_status_label(string $status): string
 function payment_type_label(string $type): string
 {
     return match ($type) {
-        'advance'   => 'Advance',
+        'advance'   => 'Advance Payment',
+        'full'      => 'Full Payment',
         'milestone' => 'Milestone Payment',
         'partial'   => 'Partial Payment',
         'final'     => 'Final Payment',
@@ -381,4 +397,67 @@ function payment_method_label(string $method): string
         'other'         => 'Other',
         default         => ucfirst(str_replace('_', ' ', $method)),
     };
+}
+
+/**
+ * A phone number reduced to the digits-only international form WhatsApp's
+ * click-to-chat links expect, or null when it cannot plausibly be one.
+ *
+ * WhatsApp will not open a chat for a number written the way people type it
+ * locally ("+91 98765-43210", "098765 43210"), and it never uses the phone's
+ * address book - so a number normalised here opens the chat whether or not
+ * the admin has the photographer saved as a contact.
+ *
+ * $countryCode is only applied to a bare 10-digit local number; anything
+ * already carrying its country code is left alone.
+ */
+function whatsapp_number(?string $phone, string $countryCode = '91'): ?string
+{
+    if ($phone === null) {
+        return null;
+    }
+
+    $digits = preg_replace('/\D+/', '', $phone) ?? '';
+
+    if ($digits === '') {
+        return null;
+    }
+
+    // "00" international prefix, e.g. 0091 98765 43210.
+    if (str_starts_with($digits, '00')) {
+        $digits = substr($digits, 2);
+    }
+
+    // A local number written with its trunk "0", e.g. 0 98765 43210.
+    if (strlen($digits) === 11 && str_starts_with($digits, '0')) {
+        $digits = substr($digits, 1);
+    }
+
+    // A bare local number - prefix the country code so the link resolves.
+    if (strlen($digits) === 10) {
+        $digits = $countryCode . $digits;
+    }
+
+    // Shorter than this is not a dialable mobile number; longer than 15 is
+    // beyond what E.164 allows, so in either case offer no link at all
+    // rather than one that opens WhatsApp on a dead number.
+    return strlen($digits) >= 11 && strlen($digits) <= 15 ? $digits : null;
+}
+
+/**
+ * A WhatsApp click-to-chat link for $phone, with $message pre-typed into the
+ * chat box, or null when the number cannot be normalised - callers hide the
+ * WhatsApp action entirely in that case rather than render a broken link.
+ */
+function whatsapp_url(?string $phone, string $message = '', string $countryCode = '91'): ?string
+{
+    $number = whatsapp_number($phone, $countryCode);
+
+    if ($number === null) {
+        return null;
+    }
+
+    $message = trim($message);
+
+    return 'https://wa.me/' . $number . ($message !== '' ? '?text=' . rawurlencode($message) : '');
 }

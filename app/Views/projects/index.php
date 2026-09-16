@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\Customer;
+use App\Models\Photographer;
 use App\Models\Project;
 
 /**
@@ -10,13 +10,13 @@ use App\Models\Project;
  * @var string             $baseUrl
  * @var string             $search
  * @var string             $status
- * @var string             $customerId
+ * @var string             $photographerId
  * @var string             $sort
- * @var list<Customer>     $customers
+ * @var list<Photographer>     $photographers
  * @var array<string, int> $counts
  * @var bool               $canDelete
  */
-$hasFilters = $search !== '' || $status !== '' || $customerId !== '';
+$hasFilters = $search !== '' || $status !== '' || $photographerId !== '';
 $filters    = ['' => 'All statuses'];
 
 foreach (Project::statuses() as $value) {
@@ -50,7 +50,7 @@ $sorts = [
 <form method="get" action="<?= e($baseUrl) ?>" class="mb-5 flex flex-wrap items-center gap-3">
     <div class="relative min-w-0 flex-1 sm:max-w-sm" data-suggest data-suggest-url="<?= e($baseUrl) ?>/suggest">
         <input type="search" name="q" value="<?= e($search) ?>"
-               placeholder="Search by project, folder or customer name"
+               placeholder="Search by customer, folder or photographer name"
                autocomplete="off"
                class="block w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-3.5 text-sm text-ink placeholder:text-slate-400 transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
                data-suggest-input>
@@ -62,13 +62,13 @@ $sorts = [
             class="absolute left-0 right-0 top-full z-20 mt-1 hidden max-h-72 overflow-y-auto rounded-lg border border-line bg-white py-1 text-sm shadow-lg"></ul>
     </div>
 
-    <label for="filter-customer" class="sr-only">Customer</label>
-    <select id="filter-customer" name="customer_id"
+    <label for="filter-photographer" class="sr-only">Photographer</label>
+    <select id="filter-photographer" name="photographer_id"
             class="rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-ink transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200">
-        <option value="">All customers</option>
-        <?php foreach ($customers as $customer): ?>
-            <option value="<?= (int) $customer->id ?>" <?= $customerId === (string) $customer->id ? 'selected' : '' ?>>
-                <?= e($customer->name) ?>
+        <option value="">All photographers</option>
+        <?php foreach ($photographers as $photographer): ?>
+            <option value="<?= (int) $photographer->id ?>" <?= $photographerId === (string) $photographer->id ? 'selected' : '' ?>>
+                <?= e($photographer->name) ?>
             </option>
         <?php endforeach; ?>
     </select>
@@ -114,7 +114,7 @@ $sorts = [
         <table class="min-w-full divide-y divide-line text-sm">
             <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                 <tr>
-                    <th scope="col" class="px-5 py-3 font-medium">Project</th>
+                    <th scope="col" class="px-5 py-3 font-medium">Customer</th>
                     <th scope="col" class="px-5 py-3 font-medium">Deadline</th>
                     <th scope="col" class="px-5 py-3 font-medium">Total payment</th>
                     <th scope="col" class="px-5 py-3 font-medium">Status</th>
@@ -126,8 +126,8 @@ $sorts = [
                     <tr class="hover:bg-slate-50/70">
                         <td class="px-5 py-3.5">
                             <a href="<?= e($baseUrl) ?>/<?= (int) $project->id ?>"
-                               class="font-medium text-ink underline-offset-2 hover:underline"><?= e($project->name) ?></a>
-                            <p class="text-xs text-slate-500"><?= e($project->customerName ?? 'Unknown customer') ?></p>
+                               class="font-medium text-ink underline-offset-2 hover:underline"><?= e($project->customerName) ?></a>
+                            <p class="text-xs text-slate-500"><?= e($project->photographerName ?? 'Unknown photographer') ?></p>
                         </td>
                         <td class="px-5 py-3.5 text-slate-600">
                             <p><?= e(date('j M Y', strtotime($project->deadline))) ?></p>
@@ -156,7 +156,7 @@ $sorts = [
 
                                 <?php if ($canDelete): ?>
                                     <form method="post" action="<?= e($baseUrl) ?>/<?= (int) $project->id ?>/delete"
-                                          onsubmit="return confirm('Permanently delete <?= e(addslashes($project->name)) ?>? This cannot be undone.');">
+                                          onsubmit="return confirm('Permanently delete <?= e(addslashes($project->customerName)) ?>? This cannot be undone.');">
                                         <?= csrf_field() ?>
                                         <button type="submit"
                                                 class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-50">

@@ -18,11 +18,11 @@ declare(strict_types=1);
  */
 
 use App\Core\Database;
-use App\Models\Customer;
+use App\Models\Photographer;
 use App\Models\Project;
 use App\Models\SalarySettlement;
 use App\Models\User;
-use App\Services\CustomerService;
+use App\Services\PhotographerService;
 use App\Services\PasswordPolicy;
 use App\Services\ProjectService;
 use App\Services\SalaryService;
@@ -70,12 +70,12 @@ $managerEmail  = 'ms-manager-' . $suffix . '@sunrisefilms.test';
 $employee1Mail = 'ms-employee1-' . $suffix . '@sunrisefilms.test';
 $employee2Mail = 'ms-employee2-' . $suffix . '@sunrisefilms.test';
 $employee3Mail = 'ms-employee3-' . $suffix . '@sunrisefilms.test';
-$customerEmail = 'ms-customer-' . $suffix . '@sunrisefilms.test';
+$photographerEmail = 'ms-photographer-' . $suffix . '@sunrisefilms.test';
 
 /** @var list<int> $userIds */
 $userIds = [];
-/** @var list<int> $customerIds */
-$customerIds = [];
+/** @var list<int> $photographerIds */
+$photographerIds = [];
 /** @var list<int> $projectIds */
 $projectIds = [];
 /** @var list<int> $taskIds */
@@ -123,15 +123,15 @@ try {
     ]);
     $userIds[] = $employee3->id;
 
-    $customer = CustomerService::create($admin, [
-        'name' => 'Salary Mgmt Customer', 'email' => $customerEmail, 'phone' => '+91 99999 77777',
+    $photographer = PhotographerService::create($admin, [
+        'name' => 'Salary Mgmt Photographer', 'email' => $photographerEmail, 'phone' => '+91 99999 77777',
         'address' => '5 Koramangala, Bengaluru 560034',
     ]);
-    $customerIds[] = $customer->id;
+    $photographerIds[] = $photographer->id;
 
     $project = ProjectService::create($admin, [
-        'customer_id' => (string) $customer->id, 'name' => 'Salary Mgmt Project',
-        'description' => 'A project to hang salary-eligible tasks off of.', 'folder_name' => 'SMCustomer_Project_2026',
+        'photographer_id' => (string) $photographer->id, 'customer_name' => 'Salary Mgmt Customer',
+        'description' => 'A project to hang salary-eligible tasks off of.', 'folder_name' => 'SMPhotographer_Project_2026',
         'deadline' => '2026-12-31', 'total_payment' => '100000',
     ]);
     $projectIds[] = $project->id;
@@ -342,8 +342,8 @@ try {
         Database::statement('DELETE FROM projects WHERE id = ?', [$id]);
     }
 
-    foreach ($customerIds as $id) {
-        Database::statement('DELETE FROM customers WHERE id = ?', [$id]);
+    foreach ($photographerIds as $id) {
+        Database::statement('DELETE FROM photographers WHERE id = ?', [$id]);
     }
 
     foreach (array_reverse($userIds) as $id) {

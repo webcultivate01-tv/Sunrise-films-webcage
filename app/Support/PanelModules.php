@@ -13,9 +13,9 @@ final class PanelModules
 {
     /** @var array<string, array{label:string, description:string, icon:string}> */
     private const MODULES = [
-        'customer-management' => [
-            'label'       => 'Customer Management',
-            'description' => 'Register new customers and maintain existing customer records.',
+        'photographer-management' => [
+            'label'       => 'Photographer Management',
+            'description' => 'Register new photographers and maintain existing photographer records.',
             'icon'        => '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/>',
         ],
         'employee-management' => [
@@ -25,7 +25,7 @@ final class PanelModules
         ],
         'work-management' => [
             'label'       => 'Work Management',
-            'description' => 'Create and track work orders across customers and teams.',
+            'description' => 'Create and track work orders across photographers and teams.',
             'icon'        => '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
         ],
         'task-management' => [
@@ -40,7 +40,7 @@ final class PanelModules
         ],
         'payments-management' => [
             'label'       => 'Payments Management',
-            'description' => 'Record customer payments and follow up on outstanding balances.',
+            'description' => 'Record photographer payments and follow up on outstanding balances.',
             'icon'        => '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/>',
         ],
         'monthly-salary' => [
@@ -52,7 +52,7 @@ final class PanelModules
 
     /**
      * Placeholder module ids shown on each role's panel, in sidebar order.
-     * Modules already covered by a real page (Customer Management, Employee
+     * Modules already covered by a real page (Photographer Management, Employee
      * Management, the dashboard and the profile) are left out here so the
      * sidebar never lists the same thing twice.
      *
@@ -76,7 +76,7 @@ final class PanelModules
      */
     private const BUILT = [
         'admin' => [
-            ['id' => 'customer-management', 'path' => '/customers'],
+            ['id' => 'photographer-management', 'path' => '/photographers'],
             ['id' => 'employee-management', 'path' => '/employees'],
             ['id' => 'work-management', 'path' => '/projects'],
             ['id' => 'task-management', 'path' => '/tasks'],
@@ -85,7 +85,7 @@ final class PanelModules
             ['id' => 'reports', 'path' => '/reports'],
         ],
         'manager' => [
-            ['id' => 'customer-management', 'path' => '/customers'],
+            ['id' => 'photographer-management', 'path' => '/photographers'],
             ['id' => 'employee-management', 'path' => '/employees'],
             ['id' => 'work-management', 'path' => '/projects'],
             ['id' => 'task-management', 'path' => '/tasks'],
