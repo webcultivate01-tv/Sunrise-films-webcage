@@ -55,7 +55,7 @@ carry over as customer names, so nothing has to be re-entered.
 
 ### 2. Environment
 
-`.env` is already created from `.env.example` with a generated `APP_KEY`.
+`.env` is already created with a generated `APP_KEY`.
 Set your MySQL credentials:
 
 ```dotenv
