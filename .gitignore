@@ -6,3 +6,5 @@
 !/storage/logs/.gitkeep
 !/storage/mail/.gitkeep
 !/public/uploads/.gitkeep
+/storage/cache/*
+!/storage/cache/.gitkeep

@@ -7,9 +7,11 @@ namespace App\Services;
 use App\Core\Exceptions\HttpException;
 use App\Core\Validator;
 use App\Models\Payment;
+use App\Models\Photographer;
 use App\Models\Project;
 use App\Models\Setting;
 use App\Models\User;
+use App\Support\PngLogo;
 use App\Support\SimplePdf;
 
 /**
@@ -441,104 +443,182 @@ final class PaymentService
     /**
      * Build the Bill/Receipt PDF for one payment - the same document whether
      * it is downloaded straight from Work Management (the advance collected
-     * when a project is created) or later from Payment Management.
+     * when a project is created) or later from Payment Management, and the
+     * same layout as the on-screen receipt that Print produces (see
+     * app/Views/payments/bill.php): letterhead, reference strip, photographer
+     * and customer, payment rows, outstanding balance, notes and signature.
+     *
+     * Every measurement below is the receipt's CSS pixel value (px-8, py-6,
+     * text-sm ...) times $s, so the two stay proportionally identical.
      */
     public static function generateBillPdf(Payment $payment): string
     {
-        $project   = Project::findById($payment->projectId);
-        $company   = Setting::current();
-        $collected = Payment::totalForProject($payment->projectId);
-        $total     = $project?->totalPayment ?? $payment->projectTotalPayment ?? 0.0;
+        $project      = Project::findById($payment->projectId);
+        $photographer = $payment->photographerId !== null ? Photographer::findById($payment->photographerId) : null;
+        $company      = Setting::current();
+        $collected    = Payment::totalForProject($payment->projectId);
+        $total        = $project?->totalPayment ?? $payment->projectTotalPayment ?? 0.0;
+        $outstanding  = max(0.0, $total - $collected);
 
-        $outstanding = max(0.0, $total - $collected);
+        $pdf = new SimplePdf();
 
-        $pdf    = new SimplePdf();
-        $left   = 50.0;
-        $right  = $pdf->pageWidth() - 50.0;
-        $white  = [1.0, 1.0, 1.0];
-        $tint   = [0.82, 0.83, 0.90];
-        $bannerH = 96.0;
+        // Palette (theme.php + Tailwind slate/red/emerald).
+        $ink      = [0.067, 0.090, 0.208];
+        $brand50  = [0.933, 0.941, 1.0];
+        $lineCol  = [0.910, 0.918, 0.953];
+        $slate100 = [0.945, 0.961, 0.976];
+        $slate300 = [0.796, 0.835, 0.882];
+        $slate400 = [0.580, 0.639, 0.722];
+        $slate500 = [0.392, 0.455, 0.545];
+        $slate600 = [0.278, 0.333, 0.412];
+        $borderCl = [0.812, 0.818, 0.843];
+        $red      = [0.863, 0.149, 0.149];
+        $green    = [0.020, 0.588, 0.412];
 
-        // ============ Header banner: dark letterhead, company block right-aligned ============
-        $pdf->rect(0, $pdf->pageHeight() - $bannerH, $pdf->pageWidth(), $bannerH, [0.067, 0.090, 0.208]);
+        // 672 CSS px (max-w-2xl) mapped onto 502 pt, centred on the A4 page.
+        $s     = 502.0 / 672.0;
+        $cardL = ($pdf->pageWidth() - 502.0) / 2;
+        $cardT = $pdf->pageHeight() - 34.0;
+        $x     = static fn (float $px): float => $cardL + $px * $s;
+        $y     = static fn (float $px): float => $cardT - $px * $s;
+        // Baseline of $font px text centred in a $lineH px line starting at $top.
+        $base  = static fn (float $top, float $lineH, float $font): float => $top + $lineH / 2 + 0.35 * $font;
+        $hr    = static function (float $top, array $color) use ($pdf, $x, $y): void {
+            $pdf->line($x(2), $y($top), $x(670), $y($top), 0.75, $color);
+        };
 
-        $y = $pdf->pageHeight() - 32.0;
-        $pdf->textRight($right, $y, $company->companyName, 16, true, $white);
-        $y -= 14;
+        // ============ Header: mark left, company block right ============
+        $contactLines = array_values(array_filter([
+            $company->companyPhone,
+            $company->companyEmail,
+            $company->companyWebsite,
+            $company->companyAddress,
+        ]));
 
-        foreach (array_filter([$company->companyAddress, $company->companyPhone, $company->companyWebsite, $company->companyEmail]) as $line) {
-            $pdf->textRight($right, $y, $line, 9, false, $tint);
-            $y -= 11;
+        $logo = PngLogo::grayscale(BASE_PATH . '/public/assets/img/sunrise-mark.png');
+
+        if ($logo !== null) {
+            $logoH = 56.0 * $logo['height'] / $logo['width'];
+            $pdf->grayImage($logo['data'], $logo['width'], $logo['height'], $x(32), $y(32 + (56 - $logoH) / 2 + $logoH), 56 * $s, $logoH * $s);
         }
 
-        $y = $pdf->pageHeight() - $bannerH - 30.0;
+        $pdf->textRight($x(640), $y($base(32, 28, 20)), $company->companyName, 20 * $s, true, $ink);
 
-        $reference = self::billReference($payment);
-
-        $pdf->text($left, $y, 'PAYMENT RECEIPT', 14, true);
-        $pdf->text($right - 160, $y, 'Reference: ' . $reference, 10, true);
-        $y -= 16;
-        $pdf->text($right - 160, $y, 'Date: ' . date('j M Y', strtotime($payment->paymentDate)), 10);
-        $y -= 30;
-
-        $pdf->text($left, $y, 'Photographer', 11, true);
-        $y -= 17;
-
-        $photographerFields = [
-            'Name'     => $payment->photographerName ?? 'Unknown photographer',
-            'Customer' => $payment->customerName ?? 'Unknown customer',
-        ];
-
-        foreach ($photographerFields as $label => $value) {
-            $pdf->text($left, $y, $label . ':', 10, true);
-            $pdf->text($left + 120, $y, $value, 10);
-            $y -= 16;
+        foreach ($contactLines as $i => $line) {
+            $pdf->textRight($x(640), $y($base(62 + $i * 18, 16, 12)), $line, 12 * $s, false, $slate500);
         }
 
-        $y -= 8;
-        $pdf->line($left, $y, $right, $y);
-        $y -= 26;
+        $t = 32 + max(56, 28 + count($contactLines) * 18) + 24;
+        $hr($t, $lineCol);
+        $t += 1;
 
-        $pdf->text($left, $y, 'Payment Details', 11, true);
-        $y -= 18;
+        // ============ Reference strip ============
+        $pdf->roundedRect($x(2), $y($t + 52), 668 * $s, 52 * $s, 0, $brand50);
 
+        $refY  = $y($base($t + 16, 20, 14));
+        $refFs = 14 * $s;
+        $pdf->text($x(32), $refY, 'Receipt No:', $refFs, true, $ink);
+        $pdf->text($x(32) + $pdf->textWidth('Receipt No: ', $refFs, true), $refY, self::billReference($payment), $refFs, false, $slate600);
+
+        $date = date('j M Y', strtotime($payment->paymentDate));
+        $pdf->textRight($x(640), $refY, $date, $refFs, false, $slate600);
+        $pdf->textRight($x(640) - $pdf->textWidth($date . ' ', $refFs), $refY, 'Receipt Date:', $refFs, true, $ink);
+
+        $t += 52;
+
+        // ============ Photographer / Customer ============
+        $top = $t + 24;
+        $col = [32.0, 348.0];
+
+        $pdf->text($x($col[0]), $y($base($top, 16, 12)), 'PHOTOGRAPHER', 12 * $s, true, $slate400);
+        $pdf->text($x($col[1]), $y($base($top, 16, 12)), 'CUSTOMER', 12 * $s, true, $slate400);
+
+        $nameTop = $top + 16 + 8;
+        $pdf->text($x($col[0]), $y($base($nameTop, 20, 14)), $payment->photographerName ?? 'Unknown photographer', 14 * $s, true, $ink);
+        $pdf->text($x($col[1]), $y($base($nameTop, 20, 14)), $payment->customerName ?? 'Unknown customer', 14 * $s, true, $ink);
+
+        $contentH = 16 + 8 + 20;
+
+        if ($photographer !== null) {
+            $pdf->text($x($col[0]), $y($base($nameTop + 24, 20, 14)), $photographer->phone, 14 * $s, false, $slate600);
+            $pdf->text($x($col[0]), $y($base($nameTop + 44, 20, 14)), $photographer->email, 14 * $s, false, $slate600);
+            $contentH += 4 + 20 + 20;
+        }
+
+        $t = $top + $contentH + 24;
+        $hr($t, $lineCol);
+        $t += 1;
+
+        // ============ Payment rows ============
         $rows = [
-            ['Payment method', payment_method_label($payment->paymentMethod)],
-            ['Amount received', self::pdfMoney($payment->amount)],
-            ['Project total value', self::pdfMoney($total)],
-            ['Total collected to date', self::pdfMoney($collected)],
+            ['Payment type', payment_type_label($payment->paymentType), false, false],
+            ['Payment method', payment_method_label($payment->paymentMethod), false, false],
+            ['Amount received', number_format($payment->amount, 2), true, true],
+            ['Project total value', number_format($total, 2), true, false],
+            ['Total collected to date', number_format($collected, 2), true, false],
         ];
 
-        foreach ($rows as [$label, $value]) {
-            $pdf->text($left, $y, $label, 10);
-            $pdf->text($left + 260, $y, $value, 10, true);
-            $y -= 18;
+        $t += 24;
+
+        foreach ($rows as $index => [$label, $value, $isMoney, $isAmount]) {
+            $rowH = $isAmount ? 44 : 40;
+            $rowY = $y($base($t, $rowH, $isAmount ? 16 : 14));
+            $size = ($isAmount ? 16 : 14) * $s;
+
+            $pdf->text($x(32), $y($base($t, $rowH, 14)), $label, 14 * $s, false, $slate500);
+
+            if ($isMoney) {
+                $pdf->rupeeRight($x(640), $rowY, $value, $size, true, $ink);
+            } else {
+                $pdf->textRight($x(640), $rowY, $value, $size, true, $ink);
+            }
+
+            $t += $rowH;
+
+            if ($index < count($rows) - 1) {
+                $pdf->line($x(32), $y($t), $x(640), $y($t), 0.75, $slate100);
+                $t += 1;
+            }
         }
 
-        $y -= 4;
-        $pdf->text($left, $y, 'Outstanding balance', 11, true);
-        $pdf->text($left + 260, $y, self::pdfMoney($outstanding), 11, true, $outstanding > 0.0 ? [0.75, 0.1, 0.1] : [0.02, 0.55, 0.35]);
-        $y -= 22;
+        // ============ Outstanding balance ============
+        $t += 16;
+        $pdf->roundedRect($x(32), $y($t + 48), 608 * $s, 48 * $s, 8 * $s, $brand50);
+        $pdf->text($x(48), $y($base($t + 12, 24, 14)), 'Outstanding Balance', 14 * $s, true, $ink);
+        $pdf->rupeeRight($x(624), $y($base($t + 12, 24, 16)), number_format($outstanding, 2), 16 * $s, true, $outstanding > 0.0 ? $red : $green);
+        $t += 48;
 
+        // ============ Notes ============
         if ($payment->notes !== null && $payment->notes !== '') {
-            $pdf->text($left, $y, 'Notes: ' . $payment->notes, 9);
-            $y -= 18;
+            $t += 20;
+            $pdf->line($x(32), $y($t), $x(640), $y($t), 0.75, $lineCol);
+            $t += 1 + 16;
+            $pdf->text($x(32), $y($base($t, 16, 12)), 'NOTES', 12 * $s, true, $slate500);
+            $t += 16 + 4;
+
+            foreach (array_slice($pdf->wrap($payment->notes, 608 * $s, 14 * $s), 0, 15) as $noteLine) {
+                $pdf->text($x(32), $y($base($t, 20, 14)), $noteLine, 14 * $s, false, $ink);
+                $t += 20;
+            }
         }
 
-        $y -= 12;
-        $pdf->line($left, $y, $right, $y);
-        $y -= 20;
-        $pdf->text($left, $y, 'This is a system-generated receipt and does not require a signature.', 8);
+        $t += 24;
+
+        // ============ Footer: signature block ============
+        $hr($t, $lineCol);
+        $t += 1 + 32;
+
+        $centre = 640 - 96.0; // the 192 px signature block, flush right
+        $pdf->textCentered($x($centre), $y($base($t, 20, 14)), 'For ' . $company->companyName, 14 * $s, false, $slate500);
+        $t += 20 + 40;
+        $pdf->line($x($centre - 96), $y($t), $x($centre + 96), $y($t), 0.75, $slate300);
+        $t += 1 + 6;
+        $pdf->textCentered($x($centre), $y($base($t, 16, 12)), 'Authorised Signatory', 12 * $s, false, $slate500);
+        $t += 16 + 32;
+
+        // The card's own outline, drawn last so it sits over the strip's fill.
+        $pdf->roundedRect($x(1), $y($t - 1), 670 * $s, ($t - 2) * $s, 16 * $s, null, $borderCl, 2 * $s);
 
         return $pdf->output();
-    }
-
-    /**
-     * Money formatted for the PDF: the base-14 fonts used there do not carry
-     * a rupee-sign glyph, so an "INR" prefix is used instead of money().
-     */
-    private static function pdfMoney(float $amount): string
-    {
-        return 'INR ' . number_format($amount, 2);
     }
 }
