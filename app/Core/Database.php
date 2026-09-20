@@ -43,6 +43,10 @@ final class Database
                     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                     PDO::ATTR_EMULATE_PREPARES   => false,
                     PDO::ATTR_STRINGIFY_FETCHES  => false,
+                    // charset= in the DSN leaves the connection collation at the
+                    // server default (general_ci on Hostinger), which clashes with
+                    // the unicode_ci tables on string-function comparisons.
+                    PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES ' . $config['charset'] . ' COLLATE utf8mb4_unicode_ci',
                 ],
             );
         } catch (PDOException $e) {

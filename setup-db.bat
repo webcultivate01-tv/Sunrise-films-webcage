@@ -19,8 +19,12 @@ echo.
 if errorlevel 1 goto badpass
 echo  [1/8] root password is now Mehar@26
 
-%MYSQL% -u root -pMehar@26 < database\schema.sql
+%MYSQL% -u root -pMehar@26 -e "CREATE DATABASE IF NOT EXISTS sunrise_films DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE utf8mb4_unicode_ci"
 if errorlevel 1 goto fail
+for %%f in (database\*.sql) do (
+    %MYSQL% -u root -pMehar@26 sunrise_films < "%%f"
+    if errorlevel 1 goto fail
+)
 echo  [2/8] schema loaded into sunrise_films
 
 php database\seed.php

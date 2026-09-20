@@ -20,38 +20,21 @@ Hand-rolled PHP MVC (no framework), MySQL, Tailwind CSS. **No Composer dependenc
 
 ### 1. Database
 
-```bash
-mysql -u root -p < database/schema.sql
-```
+Everything lives flat in `database/` as numbered `.sql` files. Run them **in number order**
+(01, 02, 03 ...). Each file is plain SQL, safe to run more than once, and works as-is in
+phpMyAdmin (select your database, then Import or the SQL tab).
 
-Creates the `sunrise_films` database and five tables: `users`, `photographers`,
-`auth_tokens`, `password_resets`, `login_attempts`.
-
-If the database was created before Photographer & Employee Management existed, bring it
-up to date instead — this adds `users.address`, the `photographers` table and the
-`task_descriptions` table, and is safe to run more than once:
-
-```bash
-php database/migrate_modules.php
-```
-
-**Upgrading an install that still calls photographers "customers".** Run this once,
-before `migrate_modules.php`. It renames in place — no row is dropped and no value is
-retyped:
-
-```bash
-php database/migrate_photographers.php
-```
-
-| Was | Is now |
+| File | What it does |
 |---|---|
-| `customers` table | `photographers` |
-| `projects.customer_id` | `projects.photographer_id` |
-| `projects.name` | `projects.customer_name` |
+| `01_migrate_photographers_rename` | Upgrade only: `customers` becomes `photographers` (no-op on a fresh DB) |
+| `02` – `13` | One table per file: users, photographers, projects, auth_tokens, password_resets, login_attempts, tasks, task_salary_credits, task_descriptions, settings, salary_settlements, payments |
+| `14` – `18` | Migrations for older installs: users columns, drop `projects.advance_payment`, `payments` type `full`, `settings.company_website`, task description backfill |
+| `19_seed_admin` | Default admin `admin@gmail.com` / `admin123` |
 
-A project no longer carries a name of its own: it is identified by the photographer it
-belongs to plus `customer_name`, the photographer's own client. Existing project names
-carry over as customer names, so nothing has to be re-entered.
+Fresh or existing database, the procedure is the same: run every file in order. Add new
+changes as the next number (`20_...sql`).
+
+Locally, `setup-db.bat` creates `sunrise_films` and runs all of them for you.
 
 ### 2. Environment
 
@@ -200,8 +183,7 @@ app/
   Views/         layouts, auth, photographers, employees, projects, tasks, my-work,
                  payments, salary, reports, modules, partials, errors
 config/          config.php
-database/        schema.sql, schema/ (one file per table), seed.php, seed_demo.php,
-                 migrate_modules.php, migrate_photographers.php
+database/        numbered .sql files (01-19), seed.php, seed_demo.php
 routes/          web.php
 public/          index.php (front controller), assets/, uploads/
 storage/         logs/, mail/

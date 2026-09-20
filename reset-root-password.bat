@@ -91,8 +91,12 @@ if errorlevel 1 ( echo  Could not restart %SERVICE%. & pause & exit /b 1 )
 REM --- from here it is identical to setup-db.bat's happy path ------------------
 echo  [6/6] Loading schema, seeding admin, running acceptance tests ...
 echo.
-"%MYSQL%" -u root -p%NEWPASS% < database\schema.sql
-if errorlevel 1 ( echo  Schema load failed. & pause & exit /b 1 )
+"%MYSQL%" -u root -p%NEWPASS% -e "CREATE DATABASE IF NOT EXISTS sunrise_films DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE utf8mb4_unicode_ci"
+if errorlevel 1 ( echo  Database create failed. & pause & exit /b 1 )
+for %%f in (database\*.sql) do (
+    "%MYSQL%" -u root -p%NEWPASS% sunrise_films < "%%f"
+    if errorlevel 1 ( echo  Schema load failed at %%f. & pause & exit /b 1 )
+)
 echo    - schema loaded into sunrise_films
 
 php database\seed.php
