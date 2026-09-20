@@ -53,7 +53,7 @@ final class TaskSalaryCredit
     {
         $row = Database::selectOne(
             "SELECT COALESCE(SUM(amount), 0) AS total FROM task_salary_credits
-             WHERE employee_id = ? AND DATE_FORMAT(credited_at, '%Y-%m') = ?",
+             WHERE employee_id = ? AND DATE_FORMAT(credited_at, '%Y-%m') COLLATE utf8mb4_unicode_ci = ?",
             [$employeeId, $month],
         );
 
@@ -72,7 +72,7 @@ final class TaskSalaryCredit
         }
 
         $sql      = "SELECT COALESCE(SUM(amount), 0) AS total FROM task_salary_credits
-                      WHERE DATE_FORMAT(credited_at, '%Y-%m') = ?";
+                      WHERE DATE_FORMAT(credited_at, '%Y-%m') COLLATE utf8mb4_unicode_ci = ?";
         $bindings = [$month];
 
         if ($employeeIds !== null) {
@@ -123,7 +123,7 @@ final class TaskSalaryCredit
                FROM task_salary_credits tsc
                JOIN tasks t ON t.id = tsc.task_id
                LEFT JOIN projects p ON p.id = tsc.project_id
-              WHERE tsc.employee_id = ? AND DATE_FORMAT(tsc.credited_at, '%Y-%m') = ?
+              WHERE tsc.employee_id = ? AND DATE_FORMAT(tsc.credited_at, '%Y-%m') COLLATE utf8mb4_unicode_ci = ?
               ORDER BY tsc.credited_at DESC",
             [$employeeId, $month],
         );
@@ -164,7 +164,7 @@ final class TaskSalaryCredit
         }
 
         if (($filters['month'] ?? '') !== '') {
-            $sql       .= " AND DATE_FORMAT(tsc.credited_at, '%Y-%m') = ?";
+            $sql       .= " AND DATE_FORMAT(tsc.credited_at, '%Y-%m') COLLATE utf8mb4_unicode_ci = ?";
             $bindings[] = $filters['month'];
         }
 
