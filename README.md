@@ -30,6 +30,8 @@ phpMyAdmin (select your database, then Import or the SQL tab).
 | `02` – `13` | One table per file: users, photographers, projects, auth_tokens, password_resets, login_attempts, tasks, task_salary_credits, task_descriptions, settings, salary_settlements, payments |
 | `14` – `18` | Migrations for older installs: users columns, drop `projects.advance_payment`, `payments` type `full`, `settings.company_website`, task description backfill |
 | `19_seed_admin` | Default admin `admin@gmail.com` / `admin123` |
+| `21_migrate_serial_numbers` | Adds `serial_no` (the 1, 2, 3 "#" column) to photographers, projects, tasks and users |
+| `22_migrate_payment_serial_numbers` | Adds `serial_no` (the "No" column) to payments |
 
 Fresh or existing database, the procedure is the same: run every file in order. Add new
 changes as the next number (`20_...sql`).

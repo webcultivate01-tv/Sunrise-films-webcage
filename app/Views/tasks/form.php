@@ -49,7 +49,7 @@ use App\Models\User;
                             class="<?= input_classes($errors, 'project_id') ?>">
                         <option value="">Select a project</option>
                         <?php foreach ($projects as $project): ?>
-                            <option value="<?= (int) $project->id ?>" data-description="<?= e($project->description) ?>"
+                            <option value="<?= (int) $project->id ?>" data-description="<?= e($project->description) ?>" data-deadline="<?= e(substr($project->deadline, 0, 10)) ?>"
                                     <?= old($old, 'project_id') === (string) $project->id ? 'selected' : '' ?>>
                                 <?= e($project->customerName) ?> - <?= e($project->photographerName ?? 'Unknown photographer') ?>
                             </option>
@@ -63,8 +63,10 @@ use App\Models\User;
                     <select id="field-employee" name="employee_id" class="<?= input_classes($errors, 'employee_id') ?>">
                         <option value="">Select an employee</option>
                         <?php foreach ($employees as $employee): ?>
-                            <option value="<?= (int) $employee->id ?>" <?= old($old, 'employee_id') === (string) $employee->id ? 'selected' : '' ?>>
-                                <?= e($employee->name) ?>
+                            <option value="<?= (int) $employee->id ?>"
+                                    data-percentage="<?= $employee->percentage !== null ? e((string) $employee->percentage) : '' ?>"
+                                    <?= old($old, 'employee_id') === (string) $employee->id ? 'selected' : '' ?>>
+                                <?= e($employee->name) ?><?= $employee->percentage !== null ? ' (' . e(rtrim(rtrim(number_format($employee->percentage, 2, '.', ''), '0'), '.')) . '%)' : ' (no percentage set)' ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -121,13 +123,18 @@ use App\Models\User;
                 </div>
 
                 <div>
-                    <label for="field-amount" class="mb-1.5 block text-sm font-medium text-slate-700">Amount (₹)</label>
-                    <input type="number" step="0.01" min="0" id="field-amount" name="amount"
-                           value="<?= old($old, 'amount') ?>"
-                           class="<?= input_classes($errors, 'amount') ?> [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                           placeholder="5000.00">
-                    <p class="mt-1.5 text-xs text-slate-500">Visible to the assigned employee, and becomes salary-eligible once completed.</p>
-                    <?= field_error($errors, 'amount') ?>
+                    <label for="field-cost" class="mb-1.5 block text-sm font-medium text-slate-700">Total project cost (₹)</label>
+                    <input type="number" step="0.01" min="0" id="field-cost" name="project_cost"
+                           value="<?= old($old, 'project_cost') ?>"
+                           class="<?= input_classes($errors, 'project_cost') ?> [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                           placeholder="20000.00">
+                    <?= field_error($errors, 'project_cost') ?>
+                </div>
+
+                <div>
+                    <span class="mb-1.5 block text-sm font-medium text-slate-700">Task amount (₹)</span>
+                    <p id="task-amount-preview" class="rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm font-semibold text-ink">-</p>
+                    <p class="mt-1.5 text-xs text-slate-500">The employee's percentage of the total project cost. Visible to the assigned employee, and becomes salary-eligible once completed.</p>
                 </div>
             </div>
         </section>
@@ -144,3 +151,30 @@ use App\Models\User;
         </div>
     </form>
 </div>
+
+<script>
+    (function () {
+        var employee = document.getElementById('field-employee');
+        var cost     = document.getElementById('field-cost');
+        var preview  = document.getElementById('task-amount-preview');
+        if (!employee || !cost || !preview) return;
+
+        function update() {
+            var option = employee.options[employee.selectedIndex];
+            var pct    = option ? parseFloat(option.getAttribute('data-percentage')) : NaN;
+            var total  = parseFloat(cost.value);
+
+            if (isNaN(pct) || isNaN(total)) {
+                preview.textContent = '-';
+                return;
+            }
+            preview.textContent = '₹' + (Math.round(total * pct) / 100).toLocaleString('en-IN', {
+                minimumFractionDigits: 2, maximumFractionDigits: 2
+            });
+        }
+
+        employee.addEventListener('change', update);
+        cost.addEventListener('input', update);
+        update();
+    })();
+</script>

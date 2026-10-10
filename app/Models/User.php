@@ -33,6 +33,9 @@ final class User
         public readonly ?int $createdBy,
         public readonly ?string $lastLoginAt,
         public readonly ?string $createdAt,
+        public readonly ?int $serialNo = null,
+        /** Share (0-100) of a project's total cost this employee earns. */
+        public readonly ?float $percentage = null,
     ) {
     }
 
@@ -54,6 +57,8 @@ final class User
             createdBy:    isset($row['created_by']) ? (int) $row['created_by'] : null,
             lastLoginAt:  isset($row['last_login_at']) ? (string) $row['last_login_at'] : null,
             createdAt:    isset($row['created_at']) ? (string) $row['created_at'] : null,
+            serialNo:     isset($row['serial_no']) ? (int) $row['serial_no'] : null,
+            percentage:   isset($row['percentage']) ? (float) $row['percentage'] : null,
         );
     }
 
@@ -99,11 +104,13 @@ final class User
         ?int $createdBy,
         string $status = self::STATUS_ACTIVE,
         string $address = '',
+        ?float $percentage = null,
     ): int {
         Database::statement(
-            'INSERT INTO users (name, email, phone, address, password_hash, role, status, created_by)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO users (serial_no, name, email, phone, address, password_hash, role, status, created_by, percentage)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
+                $role === 'admin' ? null : Database::nextSerial('users', "role <> 'admin'"),
                 $name,
                 mb_strtolower($email),
                 $phone !== '' ? $phone : null,
@@ -112,6 +119,7 @@ final class User
                 $role,
                 $status,
                 $createdBy,
+                $percentage,
             ],
         );
 
@@ -123,7 +131,7 @@ final class User
      */
     public static function allOfRole(string $role): array
     {
-        $rows = Database::select('SELECT * FROM users WHERE role = ? ORDER BY id DESC', [$role]);
+        $rows = Database::select('SELECT * FROM users WHERE role = ? ORDER BY serial_no ASC', [$role]);
 
         return array_map(self::fromRow(...), $rows);
     }
@@ -156,8 +164,8 @@ final class User
             array_push($bindings, $like, $like, $like);
         }
 
-        // Managers before Employees, newest-added first inside each role.
-        $rows = Database::select($sql . " ORDER BY FIELD(role, 'manager', 'employee'), id DESC", $bindings);
+        // Numbered order (the "#" column), oldest first.
+        $rows = Database::select($sql . " ORDER BY serial_no ASC", $bindings);
 
         return array_map(self::fromRow(...), $rows);
     }
@@ -211,7 +219,7 @@ final class User
             $bindings[] = $endDate . ' 23:59:59';
         }
 
-        $rows = Database::select($sql . " ORDER BY FIELD(role, 'manager', 'employee'), id DESC", $bindings);
+        $rows = Database::select($sql . " ORDER BY serial_no ASC", $bindings);
 
         return array_map(self::fromRow(...), $rows);
     }
@@ -270,6 +278,11 @@ final class User
         );
     }
 
+    public static function updatePercentage(int $id, ?float $percentage): void
+    {
+        Database::statement('UPDATE users SET percentage = ? WHERE id = ?', [$percentage, $id]);
+    }
+
     public static function updatePhoto(int $id, ?string $photo): void
     {
         Database::statement('UPDATE users SET photo = ? WHERE id = ?', [$photo, $id]);
@@ -291,7 +304,9 @@ final class User
      */
     public static function delete(int $id): void
     {
-        Database::statement('DELETE FROM users WHERE id = ?', [$id]);
+        if (Database::statement('DELETE FROM users WHERE id = ?', [$id]) > 0) {
+            Database::resequence('users', "role <> 'admin'");
+        }
     }
 
 

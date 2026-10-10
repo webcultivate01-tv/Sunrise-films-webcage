@@ -34,12 +34,22 @@ $sorts = [
     'amount_low'  => 'Lowest amount',
 ];
 
-$total = array_sum(array_map(static fn (Payment $p): float => $p->amount, $payments));
+$isSalary = ($tab ?? 'client') === 'salary';
+$total    = $isSalary ? 0.0 : array_sum(array_map(static fn (Payment $p): float => $p->amount, $payments));
+
+$tabs = ['client' => 'Client Payments'];
+
+if ($canSeeSalary ?? false) {
+    $tabs['salary'] = 'Salary';
+}
 ?>
 <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
     <div>
         <a href="<?= e($baseUrl) ?>" class="text-sm font-medium text-slate-500 underline-offset-2 hover:underline">&larr; Back to Payment Management</a>
         <h1 class="mt-2 text-2xl font-semibold tracking-tight text-ink">Payment History</h1>
+        <?php if ($isSalary): ?>
+            <p class="mt-1 text-sm text-slate-500"><?= count($entries) ?> salary transaction<?= count($entries) === 1 ? '' : 's' ?></p>
+        <?php else: ?>
         <p class="mt-1 text-sm text-slate-500">
             <?= count($payments) ?> transaction<?= count($payments) === 1 ? '' : 's' ?>
             <?= $hasFilters ? 'matching your filters' : 'on record' ?>
@@ -48,12 +58,34 @@ $total = array_sum(array_map(static fn (Payment $p): float => $p->amount, $payme
         <?php if ($filterProject !== null): ?>
             <p class="mt-1 text-xs font-medium text-brand-700">Filtered to <?= e($filterProject->customerName) ?></p>
         <?php endif; ?>
+        <?php endif; ?>
     </div>
-    <a href="<?= e($baseUrl) ?>/create"
-       class="rounded-lg bg-brand-gradient px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-110">
-        Record Payment
-    </a>
+    <?php if (!$isSalary): ?>
+        <a href="<?= e($baseUrl) ?>/create"
+           class="rounded-lg bg-brand-gradient px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-110">
+            Record Payment
+        </a>
+    <?php endif; ?>
 </div>
+
+<?php if (count($tabs) > 1): ?>
+    <div class="mb-5 inline-flex rounded-lg border border-line bg-white p-1 text-sm font-medium">
+        <?php foreach ($tabs as $key => $label): ?>
+            <a href="<?= e($baseUrl) ?>/history<?= $key === 'salary' ? '?tab=salary' : '' ?>"
+               class="rounded-md px-4 py-1.5 transition <?= ($isSalary ? 'salary' : 'client') === $key ? 'bg-brand-gradient text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50' ?>">
+                <?= e($label) ?>
+            </a>
+        <?php endforeach; ?>
+    </div>
+<?php endif; ?>
+
+<?php
+if ($isSalary) {
+    require __DIR__ . '/history-salary.php';
+
+    return;
+}
+?>
 
 <form method="get" action="<?= e($baseUrl) ?>/history" class="mb-5 flex flex-wrap items-center gap-3">
     <?php if ($filters['project_id'] !== ''): ?>
@@ -128,6 +160,7 @@ $total = array_sum(array_map(static fn (Payment $p): float => $p->amount, $payme
         <table class="min-w-full divide-y divide-line text-sm">
             <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                 <tr>
+                    <th scope="col" class="w-12 px-5 py-3 font-medium">No</th>
                     <th scope="col" class="px-5 py-3 font-medium">Date</th>
                     <th scope="col" class="px-5 py-3 font-medium">Customer / Photographer</th>
                     <th scope="col" class="px-5 py-3 font-medium">Type</th>
@@ -138,8 +171,9 @@ $total = array_sum(array_map(static fn (Payment $p): float => $p->amount, $payme
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
-                <?php foreach ($payments as $payment): ?>
+                <?php foreach ($payments as $i => $payment): ?>
                     <tr class="hover:bg-slate-50/70">
+                        <td class="px-5 py-3.5 tabular-nums text-slate-500"><?= $i + 1 ?></td>
                         <td class="px-5 py-3.5 text-slate-600"><?= e(date('j M Y', strtotime($payment->paymentDate))) ?></td>
                         <td class="px-5 py-3.5">
                             <p class="font-medium text-ink"><?= e($payment->customerName ?? 'Unknown customer') ?></p>

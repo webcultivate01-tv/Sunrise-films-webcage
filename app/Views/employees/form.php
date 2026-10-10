@@ -141,6 +141,24 @@ $noun   = count($roles) > 1 ? 'User' : 'Employee';
                     <?php endif; ?>
                 </div>
 
+                <?php
+                $showPercentage = $isEdit
+                    ? $account->role === User::ROLE_EMPLOYEE
+                    : (count($roles) === 1 ? array_key_first($roles) === User::ROLE_EMPLOYEE : true);
+                $percentageOld  = old($old, 'percentage', $account?->percentage !== null ? rtrim(rtrim(number_format($account->percentage, 2, '.', ''), '0'), '.') : '');
+                ?>
+                <?php if ($showPercentage): ?>
+                    <div id="percentage-wrap" <?= !$isEdit && count($roles) > 1 && ($old['role'] ?? '') !== User::ROLE_EMPLOYEE ? 'hidden' : '' ?>>
+                        <label for="field-percentage" class="mb-1.5 block text-sm font-medium text-slate-700">Percentage (%)</label>
+                        <input type="number" step="0.01" min="0" max="100" id="field-percentage" name="percentage"
+                               value="<?= $percentageOld ?>"
+                               class="<?= input_classes($errors, 'percentage') ?> [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                               placeholder="30">
+                        <p class="mt-1.5 text-xs text-slate-500">Share of the total project cost this employee earns, e.g. 30 means 30%.</p>
+                        <?= field_error($errors, 'percentage') ?>
+                    </div>
+                <?php endif; ?>
+
                 <?php if (!$isEdit): ?>
                     <div>
                         <label for="field-status" class="mb-1.5 block text-sm font-medium text-slate-700">Status</label>
@@ -169,3 +187,16 @@ $noun   = count($roles) > 1 ? 'User' : 'Employee';
         </div>
     </form>
 </div>
+
+<?php if (!$isEdit && count($roles) > 1): ?>
+    <script>
+        (function () {
+            var role = document.getElementById('field-role');
+            var wrap = document.getElementById('percentage-wrap');
+            if (!role || !wrap) return;
+            function sync() { wrap.hidden = role.value !== 'employee'; }
+            role.addEventListener('change', sync);
+            sync();
+        })();
+    </script>
+<?php endif; ?>

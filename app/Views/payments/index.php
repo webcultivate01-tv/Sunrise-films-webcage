@@ -8,6 +8,7 @@ use App\Models\Photographer;
  *
  * @var array{totalProjectValue: float, totalCollected: float, totalOutstanding: float, advanceCollected: float, dueThisMonth: float, overduePayments: float, fullyPaid: int, partiallyPaid: int} $summary
  * @var list<array{project: \App\Models\Project, collected: float, outstanding: float, status: string, paymentsCount: int, lastPaymentDate: ?string}> $rows
+ * @var list<AppModelsPayment> $transactions Latest transactions, newest first.
  * @var string         $baseUrl
  * @var string         $search
  * @var string         $status
@@ -173,6 +174,55 @@ $tiles = [
                                     </a>
                                 <?php endif; ?>
                             </div>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+<?php endif; ?>
+
+<div class="mb-3 mt-10 flex flex-wrap items-end justify-between gap-3">
+    <div>
+        <h2 class="text-lg font-semibold tracking-tight text-ink">Recent Transactions</h2>
+        <p class="mt-0.5 text-sm text-slate-500">Each transaction has its own number, separate from the customer.</p>
+    </div>
+    <a href="<?= e($baseUrl) ?>/history" class="text-sm font-semibold text-brand-700 hover:underline">View all</a>
+</div>
+
+<?php if ($transactions === []): ?>
+    <div class="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
+        No transactions yet.
+    </div>
+<?php else: ?>
+    <div class="overflow-x-auto rounded-xl border border-line bg-white">
+        <table class="min-w-full divide-y divide-line text-sm">
+            <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                <tr>
+                    <th scope="col" class="w-12 px-5 py-3 font-medium">No</th>
+                    <th scope="col" class="px-5 py-3 font-medium">Date</th>
+                    <th scope="col" class="px-5 py-3 font-medium">Customer</th>
+                    <th scope="col" class="px-5 py-3 font-medium">Type</th>
+                    <th scope="col" class="px-5 py-3 font-medium">Method</th>
+                    <th scope="col" class="px-5 py-3 font-medium">Amount</th>
+                    <th scope="col" class="px-5 py-3 text-right font-medium">Action</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                <?php foreach ($transactions as $payment): ?>
+                    <tr class="hover:bg-slate-50/70">
+                        <td class="px-5 py-3.5 tabular-nums text-slate-500"><?= (int) $payment->serialNo ?></td>
+                        <td class="px-5 py-3.5 text-slate-600"><?= e(date('j M Y', strtotime($payment->paymentDate))) ?></td>
+                        <td class="px-5 py-3.5">
+                            <p class="font-medium text-ink"><?= e($payment->customerName ?? 'Unknown customer') ?></p>
+                            <p class="text-xs text-slate-500"><?= e($payment->photographerName ?? 'Unknown photographer') ?></p>
+                        </td>
+                        <td class="px-5 py-3.5 text-slate-600"><?= e(payment_type_label($payment->paymentType)) ?></td>
+                        <td class="px-5 py-3.5 text-slate-600"><?= e(payment_method_label($payment->paymentMethod)) ?></td>
+                        <td class="px-5 py-3.5 font-medium text-ink"><?= e(money($payment->amount)) ?></td>
+                        <td class="px-5 py-3.5 text-right">
+                            <a href="<?= e($baseUrl) ?>/<?= (int) $payment->id ?>"
+                               class="text-xs font-semibold text-brand-700 hover:underline">View</a>
                         </td>
                     </tr>
                 <?php endforeach; ?>

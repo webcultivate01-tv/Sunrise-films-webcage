@@ -16,6 +16,9 @@ $fields = [
     'Mobile number' => $account->phone ?? 'Not recorded',
     'Address'       => $account->address ?? 'Not recorded',
     'Role'          => $account->roleLabel(),
+    'Percentage'    => $account->percentage !== null
+        ? rtrim(rtrim(number_format($account->percentage, 2, '.', ''), '0'), '.') . '%'
+        : 'Not applicable',
     'Created by'    => $createdBy !== null
         ? $createdBy->name . ' (' . $createdBy->roleLabel() . ')'
         : 'System',

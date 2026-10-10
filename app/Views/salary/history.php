@@ -86,6 +86,7 @@ $hasFilters = $employeeId !== '' || $type !== '' || $month !== '' || $startDate 
         <table class="min-w-full divide-y divide-line text-sm">
             <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                 <tr>
+                    <th scope="col" class="w-12 px-5 py-3 font-medium">No</th>
                     <th scope="col" class="px-5 py-3 font-medium">Date</th>
                     <th scope="col" class="px-5 py-3 font-medium">Employee</th>
                     <th scope="col" class="px-5 py-3 font-medium">Type</th>
@@ -96,8 +97,9 @@ $hasFilters = $employeeId !== '' || $type !== '' || $month !== '' || $startDate 
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
-                <?php foreach ($entries as $entry): ?>
+                <?php foreach ($entries as $i => $entry): ?>
                     <tr class="hover:bg-slate-50/70">
+                        <td class="px-5 py-3.5 tabular-nums text-slate-500"><?= $i + 1 ?></td>
                         <td class="px-5 py-3.5 text-slate-600"><?= e(pretty_date($entry['date'])) ?></td>
                         <td class="px-5 py-3.5">
                             <a href="<?= e($baseUrl) ?>/<?= (int) $entry['employeeId'] ?>"

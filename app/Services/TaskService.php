@@ -148,12 +148,16 @@ final class TaskService
         $startDate   = trim($input['start_date'] ?? '');
         $endDate     = trim($input['end_date'] ?? '');
         $priority    = trim($input['priority'] ?? '');
-        $amount      = trim($input['amount'] ?? '');
+        $projectCost = trim($input['project_cost'] ?? '');
 
         $validator->require('project_id', $projectId, 'Please select a project.');
 
         if ($projectId !== '' && Project::findById((int) $projectId) === null) {
             $validator->add('project_id', 'That project could not be found.');
+        } elseif ($projectId !== ''
+            && !in_array((int) $projectId, array_map(static fn (Project $p): int => $p->id, Project::availableForAssignment()), true)
+        ) {
+            $validator->add('project_id', 'That project already has a task assigned.');
         }
 
         $validator->require('employee_id', $employeeId, 'Please select an employee.');
@@ -163,6 +167,8 @@ final class TaskService
 
             if (!in_array((int) $employeeId, $allowedIds, true)) {
                 $validator->add('employee_id', 'You are not authorized to assign work to that employee.');
+            } elseif (self::employeePercentage((int) $employeeId) === null) {
+                $validator->add('employee_id', 'This employee has no percentage set. Edit the employee and add one first.');
             }
         }
 
@@ -185,20 +191,41 @@ final class TaskService
             $validator->add('end_date', 'The end date cannot be before the start date.');
         }
 
+        self::checkWithinProjectDeadline($validator, (int) $projectId, $endDate);
+
         $validator->require('priority', $priority, 'Please select a priority.');
 
         if ($priority !== '') {
             $validator->in('priority', $priority, Task::priorities(), 'That priority is not recognised.');
         }
 
-        $validator->require('amount', $amount, 'Please enter the task amount.');
-        $validator->decimal('amount', $amount, 'Please enter a valid amount.');
+        $validator->require('project_cost', $projectCost, 'Please enter the total project cost.');
+        $validator->decimal('project_cost', $projectCost, 'Please enter a valid project cost.');
 
-        if ($amount !== '' && !array_key_exists('amount', $validator->errors()) && (float) $amount <= 0) {
-            $validator->add('amount', 'The task amount must be greater than zero.');
+        if ($projectCost !== '' && !array_key_exists('project_cost', $validator->errors()) && (float) $projectCost <= 0) {
+            $validator->add('project_cost', 'The total project cost must be greater than zero.');
         }
 
         return $validator;
+    }
+
+    /**
+     * The employee's percentage (0-100), or null when none is set.
+     */
+    private static function employeePercentage(int $employeeId): ?float
+    {
+        $employee = User::findById($employeeId);
+
+        return $employee?->role === User::ROLE_EMPLOYEE ? $employee->percentage : null;
+    }
+
+    /**
+     * The task amount: the employee's percentage of the total project cost,
+     * rounded to the paisa.
+     */
+    public static function amountFor(float $projectCost, float $percentage): float
+    {
+        return round($projectCost * $percentage / 100, 2);
     }
 
     /**
@@ -208,6 +235,10 @@ final class TaskService
     {
         self::assertAccessManagement($actor);
 
+        $projectCost = (float) $input['project_cost'];
+        $percentage  = self::employeePercentage((int) $input['employee_id'])
+            ?? throw HttpException::forbidden('This employee has no percentage set.');
+
         $id = Task::create(
             projectId:   (int) $input['project_id'],
             employeeId:  (int) $input['employee_id'],
@@ -216,8 +247,9 @@ final class TaskService
             startDate:   trim($input['start_date']),
             endDate:     trim($input['end_date']),
             priority:    trim($input['priority']),
-            amount:      (float) $input['amount'],
+            amount:      self::amountFor($projectCost, $percentage),
             createdBy:   $actor->id,
+            projectCost: $projectCost,
         );
 
         // Row one of the task's own thread, so every later round the
@@ -271,7 +303,7 @@ final class TaskService
      *
      * @param array<string, string> $input
      */
-    public static function validateReassignment(User $actor, array $input): Validator
+    public static function validateReassignment(User $actor, array $input, Task $task): Validator
     {
         $validator = new Validator();
 
@@ -303,7 +335,29 @@ final class TaskService
             $validator->add('end_date', 'The end date cannot be before the start date.');
         }
 
+        self::checkWithinProjectDeadline($validator, $task->projectId, $endDate);
+
         return $validator;
+    }
+
+    /**
+     * A task's end date cannot run past the deadline the client gave for the
+     * project.
+     */
+    private static function checkWithinProjectDeadline(Validator $validator, int $projectId, string $endDate): void
+    {
+        if ($projectId <= 0 || $endDate === '' || array_key_exists('end_date', $validator->errors())) {
+            return;
+        }
+
+        $project = Project::findById($projectId);
+
+        if ($project !== null && strtotime($endDate) > strtotime($project->deadline)) {
+            $validator->add(
+                'end_date',
+                sprintf("The end date cannot be after the project's deadline (%s).", date('d M Y', strtotime($project->deadline))),
+            );
+        }
     }
 
     /**
@@ -334,6 +388,7 @@ final class TaskService
             amount:       $task->amount,
             createdBy:    $actor->id,
             parentTaskId: $task->id,
+            projectCost:  $task->projectCost,
         );
 
         // The new employee inherits the whole brief, not just its opening

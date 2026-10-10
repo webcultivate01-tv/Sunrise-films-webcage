@@ -87,6 +87,7 @@ final class Payment
         public readonly ?int $photographerId = null,
         public readonly ?string $photographerName = null,
         public readonly ?string $receivedByName = null,
+        public readonly ?int $serialNo = null,
     ) {
     }
 
@@ -118,6 +119,7 @@ final class Payment
             photographerId:          isset($row['photographer_id']) ? (int) $row['photographer_id'] : null,
             photographerName:        isset($row['photographer_name']) ? (string) $row['photographer_name'] : null,
             receivedByName:      isset($row['received_by_name']) ? (string) $row['received_by_name'] : null,
+            serialNo:            isset($row['serial_no']) ? (int) $row['serial_no'] : null,
         );
     }
 
@@ -227,9 +229,9 @@ final class Payment
     ): int {
         Database::statement(
             'INSERT INTO payments
-                (project_id, amount, payment_type, payment_method, reference_no, payment_date, notes, received_by)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-            [$projectId, $amount, $paymentType, $paymentMethod, $referenceNo, $paymentDate, $notes, $receivedBy],
+                (serial_no, project_id, amount, payment_type, payment_method, reference_no, payment_date, notes, received_by)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [Database::nextSerial('payments'), $projectId, $amount, $paymentType, $paymentMethod, $referenceNo, $paymentDate, $notes, $receivedBy],
         );
 
         return Database::lastInsertId();

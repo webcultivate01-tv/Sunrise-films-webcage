@@ -72,7 +72,7 @@ final class EmployeeController extends Controller
     {
         $user  = $this->user();
         $base  = $this->baseUrl($user);
-        $input = $request->only(['name', 'email', 'phone', 'address', 'role', 'status']);
+        $input = $request->only(['name', 'email', 'phone', 'address', 'role', 'status', 'percentage']);
 
         $temporaryPassword = $request->string('temporary_password');
 
@@ -192,7 +192,7 @@ final class EmployeeController extends Controller
         $user   = $this->user();
         $target = UserService::findManagedOrFail($user, (int) $params['id']);
         $base   = $this->baseUrl($user);
-        $input  = $request->only(['name', 'email', 'phone', 'address']);
+        $input  = $request->only(['name', 'email', 'phone', 'address', 'percentage']);
 
         $validator = UserService::validateAccount($user, $input, $target);
 

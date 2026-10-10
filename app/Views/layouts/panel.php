@@ -54,6 +54,15 @@ if ($user !== null) {
         'label' => 'My Account',
         'icon'  => '<circle cx="12" cy="8" r="4"/><path d="M6 21v-1a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v1"/>',
     ];
+
+    // Admin only: permanent data deletion.
+    if ($user->role === 'admin') {
+        $navItems[] = [
+            'url'   => $base . '/data-management',
+            'label' => 'Data Management',
+            'icon'  => '<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/>',
+        ];
+    }
 }
 
 $currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';

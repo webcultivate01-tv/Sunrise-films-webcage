@@ -109,6 +109,7 @@ $tabUrl = static function (string $role) use ($baseUrl, $search): string {
         <table class="min-w-full divide-y divide-line text-sm">
             <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                 <tr>
+                    <th scope="col" class="w-12 px-5 py-3 font-medium">No</th>
                     <th scope="col" class="px-5 py-3 font-medium">Name</th>
                     <th scope="col" class="px-5 py-3 font-medium">Contact</th>
                     <?php if (count($roles) > 1): ?>
@@ -122,6 +123,7 @@ $tabUrl = static function (string $role) use ($baseUrl, $search): string {
             <tbody class="divide-y divide-slate-100">
                 <?php foreach ($people as $account): ?>
                     <tr class="cursor-pointer hover:bg-slate-50/70" data-href="<?= e($baseUrl) ?>/<?= (int) $account->id ?>">
+                        <td class="px-5 py-3.5 tabular-nums text-slate-500"><?= (int) $account->serialNo ?></td>
                         <td class="px-5 py-3.5">
                             <a href="<?= e($baseUrl) ?>/<?= (int) $account->id ?>"
                                class="font-medium text-ink underline-offset-2 hover:underline"><?= e($account->name) ?></a>

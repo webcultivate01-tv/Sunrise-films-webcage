@@ -13,6 +13,7 @@ use App\Models\Payment;
 use App\Models\Project;
 use App\Models\User;
 use App\Services\PaymentService;
+use App\Services\SalaryService;
 
 /**
  * Payment Management.
@@ -42,6 +43,7 @@ final class PaymentController extends Controller
             'baseUrl'        => $this->baseUrl($user),
             'summary'        => PaymentService::dashboardSummary($user),
             'rows'           => PaymentService::projectOverview($user, $search, $status, $photographerId !== '' ? (int) $photographerId : null),
+            'transactions'   => array_slice(PaymentService::history($user), 0, 10),
             'search'         => $search,
             'status'         => $status,
             'photographerId' => $photographerId,
@@ -82,7 +84,24 @@ final class PaymentController extends Controller
      */
     public function history(Request $request, array $params): never
     {
-        $user    = $this->user();
+        $user = $this->user();
+        $tab  = $request->string('tab') === 'salary' && SalaryService::canAccessManagement($user) ? 'salary' : 'client';
+
+        if ($tab === 'salary') {
+            $filters = $request->only(['q', 'employee_id', 'type', 'month', 'start_date', 'end_date']);
+
+            $this->view('payments.history', [
+                'title'         => 'Payment History',
+                'baseUrl'       => $this->baseUrl($user),
+                'tab'           => $tab,
+                'salaryBaseUrl' => (string) Config::get('roles.' . $user->role . '.login') . '/monthly-salary',
+                'canSeeSalary'  => true,
+                'entries'       => SalaryService::globalHistory($user, $filters),
+                'employees'     => SalaryService::assignableEmployees($user),
+                'filters'       => $filters,
+            ], 'panel');
+        }
+
         $filters = $request->only([
             'q', 'project_id', 'photographer_id', 'type', 'method', 'start_date', 'end_date', 'sort',
         ]);
@@ -92,6 +111,8 @@ final class PaymentController extends Controller
         $this->view('payments.history', [
             'title'         => 'Payment History',
             'baseUrl'       => $this->baseUrl($user),
+            'tab'           => $tab,
+            'canSeeSalary'  => SalaryService::canAccessManagement($user),
             'payments'      => PaymentService::history($user, $filters),
             'filters'       => $filters,
             'photographers' => Photographer::all(),

@@ -216,16 +216,98 @@
         }
 
         var lastAutofilled = null;
+        var endInput       = document.getElementById('field-end');
 
         select.addEventListener('change', function () {
             var option      = select.options[select.selectedIndex];
             var description = option ? (option.getAttribute('data-description') || '') : '';
+
+            // The task can't run past the deadline the client gave the project.
+            if (endInput) {
+                var deadline = option ? (option.getAttribute('data-deadline') || '') : '';
+
+                if (deadline) {
+                    endInput.setAttribute('max', deadline);
+                } else {
+                    endInput.removeAttribute('max');
+                }
+            }
 
             if (target.value.trim() === '' || target.value === lastAutofilled) {
                 target.value    = description;
                 lastAutofilled  = description;
             }
         });
+    }
+
+    /**
+     * Add Task: swaps the native project <select> (whose list the browser may
+     * open upward) for a button + list that always drops down below the field.
+     * The original select stays in the form as the source of truth and still
+     * fires its change event, so the description autofill keeps working.
+     */
+    function bindDropdownBelow() {
+        var select = document.querySelector('[data-project-description-source]');
+
+        if (!select || select.getAttribute('data-dropdown-bound')) {
+            return;
+        }
+
+        select.setAttribute('data-dropdown-bound', '1');
+
+        var wrap = document.createElement('div');
+        wrap.style.position = 'relative';
+        select.parentNode.insertBefore(wrap, select);
+        wrap.appendChild(select);
+        select.style.display = 'none';
+
+        var button = document.createElement('button');
+        button.type = 'button';
+        button.className = select.className + ' text-left';
+        button.style.display = 'block';
+        button.style.width = '100%';
+        wrap.appendChild(button);
+
+        var list = document.createElement('ul');
+        list.className = 'rounded-lg border border-slate-200 bg-white shadow-lg';
+        list.style.cssText = 'position:absolute;left:0;right:0;top:100%;margin-top:4px;max-height:15rem;overflow-y:auto;z-index:50;display:none;padding:4px 0;list-style:none';
+        wrap.appendChild(list);
+
+        function label() {
+            var option = select.options[select.selectedIndex];
+            button.textContent = option ? option.textContent.trim() : '';
+        }
+
+        function close() {
+            list.style.display = 'none';
+        }
+
+        Array.prototype.forEach.call(select.options, function (option) {
+            var item = document.createElement('li');
+            item.textContent = option.textContent.trim();
+            item.style.cssText = 'padding:8px 12px;cursor:pointer;font-size:0.875rem';
+            item.addEventListener('mouseenter', function () { item.style.background = '#f1f5f9'; });
+            item.addEventListener('mouseleave', function () { item.style.background = ''; });
+            item.addEventListener('click', function () {
+                select.value = option.value;
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+                label();
+                close();
+            });
+            list.appendChild(item);
+        });
+
+        button.addEventListener('click', function () {
+            list.style.display = list.style.display === 'none' ? 'block' : 'none';
+        });
+
+        document.addEventListener('click', function (event) {
+            if (!wrap.contains(event.target)) {
+                close();
+            }
+        });
+
+        label();
     }
 
     /**
@@ -326,6 +408,7 @@
             bindClickableRows();
             bindSearchSuggestions();
             bindProjectDescriptionAutofill();
+            bindDropdownBelow();
             bindPaymentProjectPicker();
         });
     } else {
@@ -333,6 +416,7 @@
         bindClickableRows();
         bindSearchSuggestions();
         bindProjectDescriptionAutofill();
+        bindDropdownBelow();
         bindPaymentProjectPicker();
     }
 })();

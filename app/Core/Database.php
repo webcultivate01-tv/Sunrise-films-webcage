@@ -109,6 +109,27 @@ final class Database
     }
 
     /**
+     * The next serial number (the "#" shown on list rows) for a table: one more
+     * than the highest in use. $where narrows which rows are numbered together.
+     * $table and $where are code constants, never user input.
+     */
+    public static function nextSerial(string $table, string $where = '1 = 1'): int
+    {
+        $row = self::selectOne("SELECT COALESCE(MAX(serial_no), 0) + 1 AS next FROM {$table} WHERE {$where}");
+
+        return (int) ($row['next'] ?? 1);
+    }
+
+    /**
+     * Renumber a table 1, 2, 3 ... oldest-first, closing the gap a delete leaves.
+     */
+    public static function resequence(string $table, string $where = '1 = 1'): void
+    {
+        self::run('SET @serial := 0');
+        self::run("UPDATE {$table} SET serial_no = (@serial := @serial + 1) WHERE {$where} ORDER BY id");
+    }
+
+    /**
      * Wrap a user-supplied search term for a LIKE comparison, escaping the
      * wildcards so a `%` typed into a search box matches a literal per cent
      * sign instead of everything.

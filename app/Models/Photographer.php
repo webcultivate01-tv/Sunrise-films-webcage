@@ -28,6 +28,8 @@ final class Photographer
         public readonly ?string $updatedAt,
         /** Name of the user who registered this photographer, when joined in. */
         public readonly ?string $createdByName = null,
+        /** The "#" shown on list rows; stored in the database. */
+        public readonly ?int $serialNo = null,
     ) {
     }
 
@@ -47,6 +49,7 @@ final class Photographer
             createdAt:     isset($row['created_at']) ? (string) $row['created_at'] : null,
             updatedAt:     isset($row['updated_at']) ? (string) $row['updated_at'] : null,
             createdByName: isset($row['created_by_name']) ? (string) $row['created_by_name'] : null,
+            serialNo:      isset($row['serial_no']) ? (int) $row['serial_no'] : null,
         );
     }
 
@@ -121,7 +124,7 @@ final class Photographer
             $bindings[] = $endDate . ' 23:59:59';
         }
 
-        $rows = Database::select($sql . ' ORDER BY c.id DESC', $bindings);
+        $rows = Database::select($sql . ' ORDER BY c.serial_no ASC', $bindings);
 
         return array_map(self::fromRow(...), $rows);
     }
@@ -135,9 +138,9 @@ final class Photographer
         string $status = self::STATUS_ACTIVE,
     ): int {
         Database::statement(
-            'INSERT INTO photographers (name, email, phone, address, status, created_by)
-             VALUES (?, ?, ?, ?, ?, ?)',
-            [$name, mb_strtolower($email), $phone, $address, $status, $createdBy],
+            'INSERT INTO photographers (serial_no, name, email, phone, address, status, created_by)
+             VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [Database::nextSerial('photographers'), $name, mb_strtolower($email), $phone, $address, $status, $createdBy],
         );
 
         return Database::lastInsertId();
@@ -158,7 +161,9 @@ final class Photographer
 
     public static function delete(int $id): void
     {
-        Database::statement('DELETE FROM photographers WHERE id = ?', [$id]);
+        if (Database::statement('DELETE FROM photographers WHERE id = ?', [$id]) > 0) {
+            Database::resequence('photographers');
+        }
     }
 
     /**

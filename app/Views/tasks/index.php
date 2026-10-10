@@ -58,6 +58,7 @@ $hasFilters = $q !== '' || $projectId !== '' || $employeeId !== '' || $priority 
             <table class="min-w-full divide-y divide-line text-sm">
                 <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                     <tr>
+                        <th scope="col" class="w-12 px-5 py-3 font-medium">No</th>
                         <th scope="col" class="px-5 py-3 font-medium">Task</th>
                         <th scope="col" class="px-5 py-3 font-medium">Customer</th>
                         <th scope="col" class="px-5 py-3 font-medium">Previous employee</th>
@@ -69,6 +70,7 @@ $hasFilters = $q !== '' || $projectId !== '' || $employeeId !== '' || $priority 
                 <tbody class="divide-y divide-slate-100">
                     <?php foreach ($exited as $task): ?>
                         <tr class="cursor-pointer hover:bg-slate-50/70" data-href="<?= e($baseUrl) ?>/<?= (int) $task->id ?>">
+                            <td class="px-5 py-3.5 tabular-nums text-slate-500"><?= (int) $task->serialNo ?></td>
                             <td class="px-5 py-3.5">
                                 <a href="<?= e($baseUrl) ?>/<?= (int) $task->id ?>"
                                    class="font-medium text-ink underline-offset-2 hover:underline"><?= e($task->title) ?></a>
@@ -176,6 +178,7 @@ $hasFilters = $q !== '' || $projectId !== '' || $employeeId !== '' || $priority 
         <table class="min-w-full divide-y divide-line text-sm">
             <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                 <tr>
+                    <th scope="col" class="w-12 px-5 py-3 font-medium">No</th>
                     <th scope="col" class="px-5 py-3 font-medium">Task</th>
                     <th scope="col" class="px-5 py-3 font-medium">Employee</th>
                     <th scope="col" class="px-5 py-3 font-medium">Priority</th>
@@ -188,6 +191,7 @@ $hasFilters = $q !== '' || $projectId !== '' || $employeeId !== '' || $priority 
             <tbody class="divide-y divide-slate-100">
                 <?php foreach ($tasks as $task): ?>
                     <tr class="cursor-pointer hover:bg-slate-50/70" data-href="<?= e($baseUrl) ?>/<?= (int) $task->id ?>">
+                        <td class="px-5 py-3.5 tabular-nums text-slate-500"><?= (int) $task->serialNo ?></td>
                         <td class="px-5 py-3.5">
                             <a href="<?= e($baseUrl) ?>/<?= (int) $task->id ?>"
                                class="font-medium text-ink underline-offset-2 hover:underline"><?= e($task->title) ?></a>

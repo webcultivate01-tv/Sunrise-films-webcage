@@ -199,6 +199,28 @@ final class UserService
             }
         }
 
+        // Employees earn a share of each project's cost, so it is required for
+        // them (and only them).
+        $isEmployee = $existing !== null
+            ? $existing->role === User::ROLE_EMPLOYEE
+            : trim($input['role'] ?? '') === User::ROLE_EMPLOYEE;
+
+        if ($isEmployee) {
+            $percentage = trim($input['percentage'] ?? '');
+
+            $validator->require('percentage', $percentage, 'Please enter the employee percentage.');
+
+            if ($percentage !== '') {
+                $validator->decimal('percentage', $percentage, 'Please enter a valid percentage.');
+
+                if (!array_key_exists('percentage', $validator->errors())
+                    && ((float) $percentage <= 0 || (float) $percentage > 100)
+                ) {
+                    $validator->add('percentage', 'The percentage must be greater than 0 and at most 100.');
+                }
+            }
+        }
+
         if (array_key_exists('status', $input)) {
             $validator->in(
                 'status',
@@ -257,6 +279,9 @@ final class UserService
                 ? $status
                 : User::STATUS_ACTIVE,
             address:      trim($input['address'] ?? ''),
+            percentage:   $role === User::ROLE_EMPLOYEE && trim($input['percentage'] ?? '') !== ''
+                ? (float) $input['percentage']
+                : null,
         );
 
         $created = User::findById($id);
@@ -286,6 +311,10 @@ final class UserService
             trim($input['phone'] ?? ''),
             trim($input['address'] ?? ''),
         );
+
+        if ($target->role === User::ROLE_EMPLOYEE && trim($input['percentage'] ?? '') !== '') {
+            User::updatePercentage($target->id, (float) $input['percentage']);
+        }
 
         $updated = User::findById($target->id);
 

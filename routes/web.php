@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Controllers\Auth\AuthController;
 use App\Controllers\PhotographerController;
 use App\Controllers\DashboardController;
+use App\Controllers\DataManagementController;
 use App\Controllers\EmployeeController;
 use App\Controllers\HomeController;
 use App\Controllers\ModuleController;
@@ -69,6 +70,22 @@ return static function (Router $router): void {
                 $router->post('/profile/password', [ProfileController::class, 'updatePassword'], ['csrf', 'auth']);
             },
         );
+
+        // Data Management: permanent deletion, Admin only (not even registered
+        // on the Manager and Employee panels).
+        if ($role === User::ROLE_ADMIN) {
+            $router->group(
+                [
+                    'prefix'     => (string) $roleConfig['login'],
+                    'defaults'   => ['role' => $role],
+                    'middleware' => ['auth', 'roles:' . User::ROLE_ADMIN],
+                ],
+                static function (Router $router): void {
+                    $router->get('/data-management', [DataManagementController::class, 'index']);
+                    $router->post('/data-management', [DataManagementController::class, 'destroy'], ['csrf']);
+                },
+            );
+        }
 
         if (in_array($role, $managementRoles, true)) {
             $router->group(

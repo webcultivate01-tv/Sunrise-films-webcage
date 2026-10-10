@@ -59,7 +59,7 @@ final class TaskController extends Controller
         $this->view('tasks.form', [
             'title'     => 'Add Task',
             'baseUrl'   => $this->baseUrl($user),
-            'projects'  => Project::all(),
+            'projects'  => Project::availableForAssignment(),
             'employees' => TaskService::assignableEmployees($user),
         ], 'panel');
     }
@@ -74,7 +74,7 @@ final class TaskController extends Controller
         $user  = $this->user();
         $base  = $this->baseUrl($user);
         $input = $request->only([
-            'project_id', 'employee_id', 'title', 'description', 'start_date', 'end_date', 'priority', 'amount',
+            'project_id', 'employee_id', 'title', 'description', 'start_date', 'end_date', 'priority', 'project_cost',
         ]);
 
         TaskService::assertAccessManagement($user);
@@ -238,7 +238,7 @@ final class TaskController extends Controller
         $base  = $this->baseUrl($user);
         $input = $request->only(['employee_id', 'start_date', 'end_date']);
 
-        $validator = TaskService::validateReassignment($user, $input);
+        $validator = TaskService::validateReassignment($user, $input, $task);
 
         if ($validator->fails()) {
             $this->redirectWithErrors($base . '/' . $task->id . '/reassign', $validator->errors(), $input);

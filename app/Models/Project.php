@@ -39,6 +39,8 @@ final class Project
         public readonly ?string $photographerName = null,
         /** Name of the user who registered this project, when joined in. */
         public readonly ?string $createdByName = null,
+        /** The "#" shown on list rows; stored in the database. */
+        public readonly ?int $serialNo = null,
     ) {
     }
 
@@ -61,6 +63,7 @@ final class Project
             updatedAt:      isset($row['updated_at']) ? (string) $row['updated_at'] : null,
             photographerName:   isset($row['photographer_name']) ? (string) $row['photographer_name'] : null,
             createdByName:  isset($row['created_by_name']) ? (string) $row['created_by_name'] : null,
+            serialNo:       isset($row['serial_no']) ? (int) $row['serial_no'] : null,
         );
     }
 
@@ -140,6 +143,34 @@ final class Project
         return array_map(self::fromRow(...), $rows);
     }
 
+    /**
+     * Projects that can still be given to an employee: nothing assigned yet,
+     * or every task on them was cancelled/exited or reassigned away. A
+     * project with a live (assigned/accepted/in progress) or completed task
+     * is left out.
+     *
+     * @return list<self>
+     */
+    public static function availableForAssignment(): array
+    {
+        $rows = Database::select(
+            "SELECT p.*, c.name AS photographer_name, u.name AS created_by_name
+               FROM projects p
+               LEFT JOIN photographers c ON c.id = p.photographer_id
+               LEFT JOIN users u ON u.id = p.created_by
+              WHERE p.status <> ?
+                AND NOT EXISTS (
+                    SELECT 1 FROM tasks t
+                     WHERE t.project_id = p.id
+                       AND t.status IN ('assigned', 'accepted', 'in_progress', 'completed')
+                )
+              ORDER BY p.deadline ASC, p.id ASC",
+            [self::STATUS_CANCELLED],
+        );
+
+        return array_map(self::fromRow(...), $rows);
+    }
+
     public static function create(
         int $photographerId,
         string $customerName,
@@ -152,9 +183,9 @@ final class Project
     ): int {
         Database::statement(
             'INSERT INTO projects
-                (photographer_id, customer_name, description, folder_name, deadline, total_payment, status, created_by)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-            [$photographerId, $customerName, $description, $folderName, $deadline, $totalPayment, $status, $createdBy],
+                (serial_no, photographer_id, customer_name, description, folder_name, deadline, total_payment, status, created_by)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [Database::nextSerial('projects'), $photographerId, $customerName, $description, $folderName, $deadline, $totalPayment, $status, $createdBy],
         );
 
         return Database::lastInsertId();
@@ -185,7 +216,9 @@ final class Project
 
     public static function delete(int $id): void
     {
-        Database::statement('DELETE FROM projects WHERE id = ?', [$id]);
+        if (Database::statement('DELETE FROM projects WHERE id = ?', [$id]) > 0) {
+            Database::resequence('projects');
+        }
     }
 
     /**

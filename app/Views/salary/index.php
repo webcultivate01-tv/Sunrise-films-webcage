@@ -90,6 +90,7 @@ $monthLabel = pretty_month($summary['month']);
         <table class="min-w-full divide-y divide-line text-sm">
             <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                 <tr>
+                    <th scope="col" class="w-12 px-5 py-3 font-medium">No</th>
                     <th scope="col" class="px-5 py-3 font-medium">Employee</th>
                     <th scope="col" class="px-5 py-3 font-medium"><?= $hasMonth ? e($monthLabel) . ' earned' : 'This month' ?></th>
                     <th scope="col" class="px-5 py-3 font-medium"><?= $hasMonth ? e($monthLabel) . ' paid' : 'Total paid' ?></th>
@@ -99,7 +100,7 @@ $monthLabel = pretty_month($summary['month']);
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
-                <?php foreach ($rows as $row): ?>
+                <?php foreach ($rows as $i => $row): ?>
                     <?php
                         $employee    = $row['employee'];
                         $rowPaid     = $hasMonth ? $row['periodPaid'] : $row['paid'];
@@ -107,6 +108,7 @@ $monthLabel = pretty_month($summary['month']);
                         $rowStatus   = $hasMonth ? $row['periodStatus'] : $row['status'];
                     ?>
                     <tr class="hover:bg-slate-50/70">
+                        <td class="px-5 py-3.5 tabular-nums text-slate-500"><?= $i + 1 ?></td>
                         <td class="px-5 py-3.5">
                             <a href="<?= e($baseUrl) ?>/<?= (int) $employee->id ?>"
                                class="font-medium text-ink underline-offset-2 hover:underline"><?= e($employee->name) ?></a>

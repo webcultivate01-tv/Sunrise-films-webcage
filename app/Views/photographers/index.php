@@ -82,6 +82,7 @@ $filters    = [
         <table class="min-w-full divide-y divide-line text-sm">
             <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                 <tr>
+                    <th scope="col" class="w-12 px-5 py-3 font-medium">No</th>
                     <th scope="col" class="px-5 py-3 font-medium">Photographer</th>
                     <th scope="col" class="px-5 py-3 font-medium">Contact</th>
                     <th scope="col" class="px-5 py-3 font-medium">Address</th>
@@ -92,6 +93,7 @@ $filters    = [
             <tbody class="divide-y divide-slate-100">
                 <?php foreach ($photographers as $photographer): ?>
                     <tr class="cursor-pointer hover:bg-slate-50/70" data-href="<?= e($baseUrl) ?>/<?= (int) $photographer->id ?>">
+                        <td class="px-5 py-3.5 tabular-nums text-slate-500"><?= (int) $photographer->serialNo ?></td>
                         <td class="px-5 py-3.5">
                             <a href="<?= e($baseUrl) ?>/<?= (int) $photographer->id ?>"
                                class="font-medium text-ink underline-offset-2 hover:underline"><?= e($photographer->name) ?></a>
