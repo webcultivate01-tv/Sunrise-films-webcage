@@ -181,6 +181,25 @@ final class PaymentService
     }
 
     /**
+     * Project objects whose payment is not yet fully paid - used to populate
+     * the project dropdown on the Pending Payment (Record Payment) form.
+     *
+     * @return list<Project>
+     */
+    public static function pendingProjectsList(User $actor): array
+    {
+        self::assertAccess($actor);
+
+        return array_values(array_map(
+            static fn (array $row): Project => $row['project'],
+            array_filter(
+                self::rows(),
+                static fn (array $row): bool => $row['status'] !== self::STATUS_PAID,
+            ),
+        ));
+    }
+
+    /**
      * Live suggestions for the Payment Management search box.
      *
      * @return list<array{project: Project, collected: float, outstanding: float, status: string, paymentsCount: int, lastPaymentDate: ?string}>

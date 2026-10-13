@@ -38,7 +38,7 @@ $back            = $preselectedId !== null ? $baseUrl . '/history?project_id=' .
         Back
     </a>
     <div class="mt-3">
-        <h1 class="text-2xl font-semibold tracking-tight text-ink">Record Payment</h1>
+        <h1 class="text-2xl font-semibold tracking-tight text-ink">Pending Payment</h1>
         <p class="mt-0.5 text-sm text-slate-500">Log a payment received against a project. This cannot be edited once saved.</p>
     </div>
 </div>

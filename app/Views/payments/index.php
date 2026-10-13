@@ -53,7 +53,7 @@ $tiles = [
         </a>
         <a href="<?= e($baseUrl) ?>/create"
            class="rounded-lg bg-brand-gradient px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-110">
-            Record Payment
+            Pending Payment
         </a>
     </div>
 </div>
@@ -68,7 +68,7 @@ $tiles = [
     <a href="<?= e($baseUrl) ?>?tab=call-pending"
        class="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold transition border-b-2 -mb-px
               <?= $activeTab === 'call-pending' ? 'border-brand-600 text-brand-700' : 'border-transparent text-slate-500 hover:text-ink' ?>">
-        Call Pending
+        Payment Pending
         <?php if (count($pendingProjects) > 0): ?>
             <span class="inline-flex items-center justify-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700">
                 <?= count($pendingProjects) ?>
@@ -120,7 +120,7 @@ $tiles = [
                                 </a>
                                 <a href="<?= e($baseUrl) ?>/create?project_id=<?= (int) $project->id ?>"
                                    class="rounded-lg bg-brand-gradient px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:brightness-110">
-                                    Record Payment
+                                    Pending Payment
                                 </a>
                             </div>
                         </td>
@@ -248,7 +248,7 @@ $tiles = [
                                 <?php if ($row['outstanding'] > 0.0): ?>
                                     <a href="<?= e($baseUrl) ?>/create?project_id=<?= (int) $project->id ?>"
                                        class="rounded-lg bg-brand-gradient px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:brightness-110">
-                                        Record Payment
+                                        Pending Payment
                                     </a>
                                 <?php endif; ?>
                             </div>

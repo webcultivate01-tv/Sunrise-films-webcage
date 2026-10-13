@@ -318,8 +318,8 @@
      * autofill above stays out of the way of a manual edit.
      */
     function bindPaymentProjectPicker() {
-        var customerSelect = document.querySelector('[data-payment-customer-filter]');
-        var projectSelect  = document.querySelector('[data-payment-project-select]');
+        var photographerSelect = document.querySelector('[data-payment-photographer-filter]');
+        var projectSelect      = document.querySelector('[data-payment-project-select]');
 
         if (!projectSelect) {
             return;
@@ -332,13 +332,15 @@
         var amountField        = document.querySelector('[data-payment-amount-target]');
         var lastAutofilledAmount = null;
 
+        // Snapshot every project option (excluding the placeholder) so we can
+        // restore them when the photographer filter is cleared.
+        var allProjectOptions = Array.prototype.slice.call(
+            projectSelect.querySelectorAll('option[data-photographer]')
+        );
+
         function formatMoney(value) {
             var amount = parseFloat(value);
-
-            if (isNaN(amount)) {
-                amount = 0;
-            }
-
+            if (isNaN(amount)) { amount = 0; }
             return '₹' + amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
 
@@ -346,10 +348,7 @@
             var option = projectSelect.options[projectSelect.selectedIndex];
 
             if (!option || !option.value) {
-                if (summaryBox) {
-                    summaryBox.hidden = true;
-                }
-
+                if (summaryBox) { summaryBox.hidden = true; }
                 return;
             }
 
@@ -370,32 +369,39 @@
             }
         }
 
-        function filterProjectsByCustomer() {
-            if (!customerSelect) {
-                return;
-            }
+        function filterProjectsByPhotographer() {
+            if (!photographerSelect) { return; }
 
-            var customerId = customerSelect.value;
-            var options    = projectSelect.querySelectorAll('option[data-customer]');
+            var photographerId = photographerSelect.value;
 
-            Array.prototype.forEach.call(options, function (option) {
-                var matches = customerId === '' || option.getAttribute('data-customer') === customerId;
-
-                option.hidden   = !matches;
-                option.disabled = !matches;
+            // Remove all project options then re-add only the matching ones.
+            allProjectOptions.forEach(function (option) {
+                if (option.parentNode) { option.parentNode.removeChild(option); }
             });
 
-            var selected = projectSelect.options[projectSelect.selectedIndex];
+            var placeholder = projectSelect.options[0];
 
-            if (selected && selected.disabled) {
+            allProjectOptions.forEach(function (option) {
+                if (photographerId === '' || option.getAttribute('data-photographer') === photographerId) {
+                    projectSelect.appendChild(option);
+                }
+            });
+
+            // If the currently selected project no longer appears, reset.
+            var stillPresent = false;
+            Array.prototype.forEach.call(projectSelect.options, function (o) {
+                if (o.selected && o.value) { stillPresent = true; }
+            });
+
+            if (!stillPresent) {
                 projectSelect.value = '';
                 updateSummary();
             }
         }
 
-        if (customerSelect) {
-            customerSelect.addEventListener('change', filterProjectsByCustomer);
-            filterProjectsByCustomer();
+        if (photographerSelect) {
+            photographerSelect.addEventListener('change', filterProjectsByPhotographer);
+            filterProjectsByPhotographer();
         }
 
         projectSelect.addEventListener('change', updateSummary);

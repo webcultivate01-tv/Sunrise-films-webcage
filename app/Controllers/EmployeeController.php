@@ -56,7 +56,7 @@ final class EmployeeController extends Controller
         $user = $this->user();
 
         $this->view('employees.form', [
-            'title'   => 'Add User',
+            'title'   => 'Add Editor',
             'baseUrl' => $this->baseUrl($user),
             'account' => null,
             'roles'   => $this->roleOptions($user),

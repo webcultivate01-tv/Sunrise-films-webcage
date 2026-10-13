@@ -161,9 +161,9 @@ final class PaymentController extends Controller
         $projectId = $request->string('project_id');
 
         $this->view('payments.create', [
-            'title'          => 'Record Payment',
+            'title'          => 'Pending Payment',
             'baseUrl'        => $this->baseUrl($user),
-            'projects'       => Project::all(),
+            'projects'       => PaymentService::pendingProjectsList($user),
             'photographers'  => Photographer::all(),
             'projectSummary' => PaymentService::projectPaymentIndex($user),
             'preselectedId'  => $projectId !== '' ? (int) $projectId : null,
