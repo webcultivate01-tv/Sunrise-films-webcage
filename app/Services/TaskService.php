@@ -143,7 +143,7 @@ final class TaskService
 
         $projectId   = trim($input['project_id'] ?? '');
         $employeeId  = trim($input['employee_id'] ?? '');
-        $title       = trim($input['title'] ?? '');
+        $projectType = trim($input['project_type'] ?? '');
         $description = trim($input['description'] ?? '');
         $startDate   = trim($input['start_date'] ?? '');
         $endDate     = trim($input['end_date'] ?? '');
@@ -172,8 +172,11 @@ final class TaskService
             }
         }
 
-        $validator->require('title', $title, 'Please enter a task title.');
-        $validator->maxLength('title', $title, 150, 'Title must be 150 characters or fewer.');
+        $validator->require('project_type', $projectType, 'Please select a project type.');
+
+        if ($projectType !== '' && !in_array($projectType, Task::projectTypes(), true)) {
+            $validator->add('project_type', 'That project type is not recognised.');
+        }
 
         $validator->require('description', $description, 'Please enter a task description.');
 
@@ -239,10 +242,12 @@ final class TaskService
         $percentage  = self::employeePercentage((int) $input['employee_id'])
             ?? throw HttpException::forbidden('This employee has no percentage set.');
 
+        $projectType = trim($input['project_type']);
+
         $id = Task::create(
             projectId:   (int) $input['project_id'],
             employeeId:  (int) $input['employee_id'],
-            title:       trim($input['title']),
+            title:       $projectType,
             description: trim($input['description']),
             startDate:   trim($input['start_date']),
             endDate:     trim($input['end_date']),
@@ -250,6 +255,7 @@ final class TaskService
             amount:      self::amountFor($projectCost, $percentage),
             createdBy:   $actor->id,
             projectCost: $projectCost,
+            projectType: $projectType,
         );
 
         // Row one of the task's own thread, so every later round the

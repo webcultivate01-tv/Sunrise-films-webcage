@@ -112,11 +112,16 @@ use App\Models\User;
                 </div>
 
                 <div>
-                    <label for="field-title" class="mb-1.5 block text-sm font-medium text-slate-700">Task title</label>
-                    <input type="text" id="field-title" name="title"
-                           value="<?= old($old, 'title') ?>"
-                           class="<?= input_classes($errors, 'title') ?>" placeholder="Rough cut - Sharma Wedding" autofocus>
-                    <?= field_error($errors, 'title') ?>
+                    <label for="field-project-type" class="mb-1.5 block text-sm font-medium text-slate-700">Project type</label>
+                    <select id="field-project-type" name="project_type" class="<?= input_classes($errors, 'project_type') ?>">
+                        <option value="">Select a project type</option>
+                        <?php foreach (\App\Models\Task::projectTypes() as $type): ?>
+                            <option value="<?= e($type) ?>" <?= old($old, 'project_type') === $type ? 'selected' : '' ?>>
+                                <?= e($type) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <?= field_error($errors, 'project_type') ?>
                 </div>
 
                 <div class="sm:col-span-2 lg:col-span-3">
