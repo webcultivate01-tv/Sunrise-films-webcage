@@ -153,14 +153,6 @@ $back            = $preselectedId !== null ? $baseUrl . '/history?project_id=' .
                     <?= field_error($errors, 'payment_date') ?>
                 </div>
 
-                <div>
-                    <label for="field-reference" class="mb-1.5 block text-sm font-medium text-slate-700">Reference / transaction no. (optional)</label>
-                    <input type="text" id="field-reference" name="reference_no"
-                           value="<?= old($old, 'reference_no') ?>"
-                           class="<?= input_classes($errors, 'reference_no') ?>" placeholder="e.g. UTR1234567890">
-                    <?= field_error($errors, 'reference_no') ?>
-                </div>
-
                 <div class="sm:col-span-2 lg:col-span-3">
                     <label for="field-notes" class="mb-1.5 block text-sm font-medium text-slate-700">Notes (optional)</label>
                     <textarea id="field-notes" name="notes" rows="2"

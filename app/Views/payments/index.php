@@ -120,7 +120,7 @@ $tiles = [
                                 </a>
                                 <a href="<?= e($baseUrl) ?>/create?project_id=<?= (int) $project->id ?>"
                                    class="rounded-lg bg-brand-gradient px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:brightness-110">
-                                    Pending Payment
+                                    Add Payment
                                 </a>
                             </div>
                         </td>
