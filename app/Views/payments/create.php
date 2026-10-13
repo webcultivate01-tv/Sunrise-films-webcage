@@ -61,7 +61,7 @@ $back            = $preselectedId !== null ? $baseUrl . '/history?project_id=' .
                 <div>
                     <label for="field-photographer" class="mb-1.5 block text-sm font-medium text-slate-700">Photographer</label>
                     <select id="field-photographer" data-payment-photographer-filter
-                            class="<?= input_classes($errors, 'project_id') ?>">
+                            class="block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-ink transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200">
                         <option value="">Select a photographer</option>
                         <?php foreach ($photographers as $photographer): ?>
                             <option value="<?= (int) $photographer->id ?>" <?= $selectedPhotographer === (string) $photographer->id ? 'selected' : '' ?>>

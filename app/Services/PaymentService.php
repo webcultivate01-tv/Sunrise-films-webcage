@@ -141,9 +141,10 @@ final class PaymentService
     }
 
     /**
-     * Every project's collected/outstanding figures, keyed by project id -
+     * Pending projects' collected/outstanding figures, keyed by project id -
      * lets the Record Payment form show a project's running total the moment
-     * it is picked, without waiting on a payment to actually be posted.
+     * it is picked. Only includes projects that are not fully paid, matching
+     * the dropdown that pendingProjectsList() populates.
      *
      * @return array<int, array{total: float, collected: float, outstanding: float}>
      */
@@ -154,6 +155,10 @@ final class PaymentService
         $index = [];
 
         foreach (self::rows() as $row) {
+            if ($row['status'] === self::STATUS_PAID) {
+                continue;
+            }
+
             $index[$row['project']->id] = [
                 'total'       => $row['project']->totalPayment,
                 'collected'   => $row['collected'],

@@ -372,14 +372,13 @@
         function filterProjectsByPhotographer() {
             if (!photographerSelect) { return; }
 
-            var photographerId = photographerSelect.value;
+            var photographerId  = photographerSelect.value;
+            var previousValue   = projectSelect.value;
 
             // Remove all project options then re-add only the matching ones.
             allProjectOptions.forEach(function (option) {
                 if (option.parentNode) { option.parentNode.removeChild(option); }
             });
-
-            var placeholder = projectSelect.options[0];
 
             allProjectOptions.forEach(function (option) {
                 if (photographerId === '' || option.getAttribute('data-photographer') === photographerId) {
@@ -387,13 +386,11 @@
                 }
             });
 
-            // If the currently selected project no longer appears, reset.
-            var stillPresent = false;
-            Array.prototype.forEach.call(projectSelect.options, function (o) {
-                if (o.selected && o.value) { stillPresent = true; }
-            });
+            // Restore the previous selection if it is still in the filtered list,
+            // otherwise reset to the placeholder and hide the summary.
+            projectSelect.value = previousValue;
 
-            if (!stillPresent) {
+            if (projectSelect.value !== previousValue) {
                 projectSelect.value = '';
                 updateSummary();
             }
