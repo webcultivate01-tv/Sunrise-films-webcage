@@ -6,7 +6,7 @@ declare(strict_types=1);
  * End-to-end check of the Work Management acceptance criteria, run against
  * the real database.
  *
- * It creates a throwaway Manager, Employee and Photographer, exercises the role
+ * It creates a throwaway Manager, Editor and Photographer, exercises the role
  * rules and validation on projects, then deletes everything it created.
  *
  * Usage:  php tests/work_management_check.php
@@ -95,7 +95,7 @@ try {
     $userIds[] = $manager->id;
 
     $employee = UserService::createAccount($manager, [
-        'name'     => 'Work Mgmt Employee',
+        'name'     => 'Work Mgmt Editor',
         'email'    => $employeeEmail,
         'phone'    => '+91 98765 43221',
         'address'  => '2 Church Street, Bengaluru 560001',

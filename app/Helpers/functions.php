@@ -74,8 +74,8 @@ function status_badge(string $status): string
 }
 
 /**
- * Badge classes for a user's role, so Managers and Employees are told apart at
- * a glance in the Employee Management list.
+ * Badge classes for a user's role, so Managers and Editors are told apart at
+ * a glance in the Editor Management list.
  */
 function role_badge(string $role): string
 {
@@ -255,7 +255,7 @@ function task_status_label(string $status): string
 {
     return match ($status) {
         'assigned'    => 'Assigned',
-        'accepted'    => 'Accepted by Employee',
+        'accepted'    => 'Accepted by Editor',
         'in_progress' => 'In Progress',
         'completed'   => 'Completed',
         'exited'      => 'Exited',

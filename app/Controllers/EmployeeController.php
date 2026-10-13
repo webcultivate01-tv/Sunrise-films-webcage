@@ -15,7 +15,7 @@ use App\Services\UserService;
 use App\Services\WelcomeMailer;
 
 /**
- * Employee Management (module spec s6 - s12).
+ * Editor Management (module spec s6 - s12).
  *
  * One controller serves the Admin and the Manager panel. What differs between
  * them - which accounts are listed, which roles may be assigned - is decided
@@ -25,7 +25,7 @@ use App\Services\WelcomeMailer;
 final class EmployeeController extends Controller
 {
     /**
-     * GET /{panel}/employees - the list and the search box (module spec s16).
+     * GET /{panel}/editors - the list and the search box (module spec s16).
      *
      * @param array<string, string> $params
      */
@@ -36,7 +36,7 @@ final class EmployeeController extends Controller
         $role   = $request->string('role');
 
         $this->view('employees.index', [
-            'title'      => 'Employee Management',
+            'title'      => 'Editor Management',
             'baseUrl'    => $this->baseUrl($user),
             'people'     => UserService::people($user, $search, $role),
             'search'     => $search,
@@ -47,7 +47,7 @@ final class EmployeeController extends Controller
     }
 
     /**
-     * GET /{panel}/employees/create - module spec s7, s9.
+     * GET /{panel}/editors/create - module spec s7, s9.
      *
      * @param array<string, string> $params
      */
@@ -64,7 +64,7 @@ final class EmployeeController extends Controller
     }
 
     /**
-     * POST /{panel}/employees - module spec s9, s11.
+     * POST /{panel}/editors - module spec s9, s11.
      *
      * @param array<string, string> $params
      */
@@ -121,7 +121,7 @@ final class EmployeeController extends Controller
     }
 
     /**
-     * GET /{panel}/employees/suggest - live suggestions for the search box.
+     * GET /{panel}/editors/suggest - live suggestions for the search box.
      *
      * @param array<string, string> $params
      */
@@ -146,7 +146,7 @@ final class EmployeeController extends Controller
     }
 
     /**
-     * GET /{panel}/employees/{id} - module spec s16 (View action).
+     * GET /{panel}/editors/{id} - module spec s16 (View action).
      *
      * @param array<string, string> $params
      */
@@ -165,7 +165,7 @@ final class EmployeeController extends Controller
     }
 
     /**
-     * GET /{panel}/employees/{id}/edit - module spec s12 (Edit Employee).
+     * GET /{panel}/editors/{id}/edit - module spec s12 (Edit Editor).
      *
      * @param array<string, string> $params
      */
@@ -183,7 +183,7 @@ final class EmployeeController extends Controller
     }
 
     /**
-     * POST /{panel}/employees/{id} - module spec s12.
+     * POST /{panel}/editors/{id} - module spec s12.
      *
      * @param array<string, string> $params
      */
@@ -210,7 +210,7 @@ final class EmployeeController extends Controller
     }
 
     /**
-     * GET /{panel}/employees/{id}/password
+     * GET /{panel}/editors/{id}/password
      *
      * @param array<string, string> $params
      */
@@ -228,7 +228,7 @@ final class EmployeeController extends Controller
     }
 
     /**
-     * POST /{panel}/employees/{id}/password
+     * POST /{panel}/editors/{id}/password
      *
      * @param array<string, string> $params
      */
@@ -259,7 +259,7 @@ final class EmployeeController extends Controller
     }
 
     /**
-     * POST /{panel}/employees/{id}/status - module spec s12 (Deactivate).
+     * POST /{panel}/editors/{id}/status - module spec s12 (Deactivate).
      *
      * @param array<string, string> $params
      */
@@ -281,7 +281,7 @@ final class EmployeeController extends Controller
     }
 
     /**
-     * POST /{panel}/employees/{id}/delete - module spec s12 (Delete).
+     * POST /{panel}/editors/{id}/delete - module spec s12 (Delete).
      *
      * @param array<string, string> $params
      */
@@ -300,7 +300,7 @@ final class EmployeeController extends Controller
     }
 
     /**
-     * The role <select> for the create form: both roles for an Admin, Employee
+     * The role <select> for the create form: both roles for an Admin, Editor
      * alone for a Manager (module spec s8).
      *
      * @return array<string, string> role => label
@@ -318,6 +318,6 @@ final class EmployeeController extends Controller
 
     private function baseUrl(User $user): string
     {
-        return (string) Config::get('roles.' . $user->role . '.login') . '/employees';
+        return (string) Config::get('roles.' . $user->role . '.login') . '/editors';
     }
 }

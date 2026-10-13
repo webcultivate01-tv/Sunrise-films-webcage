@@ -3,7 +3,7 @@
 use App\Models\SalarySettlement;
 
 /**
- * My Salary - the Employee's own summary, monthly breakdown, one month's
+ * My Salary - the Editor's own summary, monthly breakdown, one month's
  * drill-down entries, and history (salary spec s2, s3, s13).
  *
  * @var string                                                                                       $baseUrl

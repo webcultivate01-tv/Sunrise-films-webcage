@@ -4,7 +4,7 @@ use App\Models\SalarySettlement;
 use App\Models\User;
 
 /**
- * View Employee Salary (spec s4, s5): the top summary, the monthly
+ * View Editor Salary (spec s4, s5): the top summary, the monthly
  * breakdown, one month's drill-down entries, and the employee's history.
  *
  * @var User                                                                                 $employee

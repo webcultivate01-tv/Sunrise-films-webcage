@@ -13,7 +13,7 @@ final class HomeController extends Controller
 {
     /**
      * GET / — there is no shared landing page; every role signs in directly
-     * at its own URL (/admin, /manager, /employee), so this just forwards to
+     * at its own URL (/admin, /manager, /editor), so this just forwards to
      * the Admin login, or to the dashboard of whoever is already signed in.
      *
      * @param array<string, string> $params

@@ -22,7 +22,7 @@ use App\Models\User;
  * instead of quietly changing what it covers.
  *
  * It also resolves ids to names, so a generated report reads
- * "Employee: Priya Sharma" rather than "Employee ID: 7".
+ * "Editor: Priya Sharma" rather than "Editor ID: 7".
  */
 final class ReportFilters
 {
@@ -43,7 +43,7 @@ final class ReportFilters
 
     /**
      * Filters that must be chosen before a report can be generated at all:
-     * an "Employee Work Report" without an employee is not a wider report,
+     * an "Editor Work Report" without an employee is not a wider report,
      * it is a different one, so it is refused rather than silently answered
      * with every employee's work.
      *
@@ -126,7 +126,7 @@ final class ReportFilters
 
             'role' => in_array($value, [User::ROLE_MANAGER, User::ROLE_EMPLOYEE], true)
                 ? self::ok($value, ucfirst($value))
-                : self::bad('Role must be either Manager or Employee.'),
+                : self::bad('Role must be either Manager or Editor.'),
 
             'priority' => in_array($value, Task::priorities(), true)
                 ? self::ok($value, task_priority_label($value))
@@ -207,10 +207,10 @@ final class ReportFilters
     }
 
     /**
-     * An employee filter must land on a real Employee account.
+     * An employee filter must land on a real Editor account.
      *
      * Not an Admin, not a Manager, and not a deleted id: work is only ever
-     * assigned to Employees and salary is only ever credited to them, so any
+     * assigned to Editors and salary is only ever credited to them, so any
      * other id would produce a confidently empty report - or, further down,
      * a 404 from the service that finally looks the employee up. Rejecting it
      * here turns that into a message against the field instead.
@@ -230,7 +230,7 @@ final class ReportFilters
         }
 
         if ($user->role !== User::ROLE_EMPLOYEE) {
-            return self::bad('Only an Employee can be reported on here - work is not assigned to ' . $user->roleLabel() . ' accounts.');
+            return self::bad('Only an Editor can be reported on here - work is not assigned to ' . $user->roleLabel() . ' accounts.');
         }
 
         return self::ok((string) $user->id, $user->name);
@@ -294,7 +294,7 @@ final class ReportFilters
             'start_date'  => 'From',
             'end_date'    => 'To',
             'photographer_id' => 'Photographer',
-            'employee_id' => 'Employee',
+            'employee_id' => 'Editor',
             'project_id'  => 'Project',
             default       => ucfirst(str_replace('_', ' ', $key)),
         };

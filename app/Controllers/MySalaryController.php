@@ -12,15 +12,15 @@ use App\Models\User;
 use App\Services\SalaryService;
 
 /**
- * My Salary - the Employee side of Monthly Salary (salary spec s2, s3, s13).
+ * My Salary - the Editor side of Monthly Salary (salary spec s2, s3, s13).
  *
- * Every method here only ever reads or acts on the signed-in Employee's own
+ * Every method here only ever reads or acts on the signed-in Editor's own
  * id, so a tampered URL can never reach somebody else's salary or bill.
  */
 final class MySalaryController extends Controller
 {
     /**
-     * GET /employee/my-salary - own summary, monthly breakdown and history,
+     * GET /editor/my-salary - own summary, monthly breakdown and history,
      * with an optional ?month= to drill into one month's entries.
      *
      * @param array<string, string> $params
@@ -47,7 +47,7 @@ final class MySalaryController extends Controller
     }
 
     /**
-     * GET /employee/my-salary/bills/{id} - View one of my bills.
+     * GET /editor/my-salary/bills/{id} - View one of my bills.
      *
      * @param array<string, string> $params
      */
@@ -65,7 +65,7 @@ final class MySalaryController extends Controller
     }
 
     /**
-     * GET /employee/my-salary/bills/{id}/download - Download one of my bills.
+     * GET /editor/my-salary/bills/{id}/download - Download one of my bills.
      *
      * @param array<string, string> $params
      */

@@ -24,7 +24,7 @@ use App\Support\PanelModules;
 
 /**
  * Every role gets the same set of routes under its own entry point (auth spec
- * s2): /admin, /manager and /employee are built from the same definitions, so
+ * s2): /admin, /manager and /editor are built from the same definitions, so
  * the three panels cannot drift apart.
  *
  * Photographer Management and Employee Management are the exception: they are
@@ -107,17 +107,17 @@ return static function (Router $router): void {
                     $router->post('/photographers/{id}/delete', [PhotographerController::class, 'destroy'], ['csrf']);
 
                     // --- Employee Management (module spec s6 - s12) --------
-                    $router->get('/employees', [EmployeeController::class, 'index']);
-                    $router->get('/employees/create', [EmployeeController::class, 'create']);
-                    $router->get('/employees/suggest', [EmployeeController::class, 'suggest']);
-                    $router->post('/employees', [EmployeeController::class, 'store'], ['csrf']);
-                    $router->get('/employees/{id}', [EmployeeController::class, 'show']);
-                    $router->get('/employees/{id}/edit', [EmployeeController::class, 'edit']);
-                    $router->post('/employees/{id}', [EmployeeController::class, 'update'], ['csrf']);
-                    $router->get('/employees/{id}/password', [EmployeeController::class, 'editPassword']);
-                    $router->post('/employees/{id}/password', [EmployeeController::class, 'updatePassword'], ['csrf']);
-                    $router->post('/employees/{id}/status', [EmployeeController::class, 'updateStatus'], ['csrf']);
-                    $router->post('/employees/{id}/delete', [EmployeeController::class, 'destroy'], ['csrf']);
+                    $router->get('/editors', [EmployeeController::class, 'index']);
+                    $router->get('/editors/create', [EmployeeController::class, 'create']);
+                    $router->get('/editors/suggest', [EmployeeController::class, 'suggest']);
+                    $router->post('/editors', [EmployeeController::class, 'store'], ['csrf']);
+                    $router->get('/editors/{id}', [EmployeeController::class, 'show']);
+                    $router->get('/editors/{id}/edit', [EmployeeController::class, 'edit']);
+                    $router->post('/editors/{id}', [EmployeeController::class, 'update'], ['csrf']);
+                    $router->get('/editors/{id}/password', [EmployeeController::class, 'editPassword']);
+                    $router->post('/editors/{id}/password', [EmployeeController::class, 'updatePassword'], ['csrf']);
+                    $router->post('/editors/{id}/status', [EmployeeController::class, 'updateStatus'], ['csrf']);
+                    $router->post('/editors/{id}/delete', [EmployeeController::class, 'destroy'], ['csrf']);
 
                     // --- Work Management -----------------------------------
                     $router->get('/projects', [ProjectController::class, 'index']);

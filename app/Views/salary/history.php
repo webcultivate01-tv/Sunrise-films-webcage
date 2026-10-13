@@ -88,7 +88,7 @@ $hasFilters = $employeeId !== '' || $type !== '' || $month !== '' || $startDate 
                 <tr>
                     <th scope="col" class="w-12 px-5 py-3 font-medium">No</th>
                     <th scope="col" class="px-5 py-3 font-medium">Date</th>
-                    <th scope="col" class="px-5 py-3 font-medium">Employee</th>
+                    <th scope="col" class="px-5 py-3 font-medium">Editor</th>
                     <th scope="col" class="px-5 py-3 font-medium">Type</th>
                     <th scope="col" class="px-5 py-3 font-medium">Amount</th>
                     <th scope="col" class="px-5 py-3 font-medium">Reference</th>

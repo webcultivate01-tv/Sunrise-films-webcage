@@ -1,7 +1,7 @@
 <?php
 /**
  * Role login page (spec s4). The same template serves /admin, /manager and
- * /employee; only the role labelling and the form action differ.
+ * /editor; only the role labelling and the form action differ.
  *
  * @var string               $role
  * @var array<string, mixed> $roleConfig

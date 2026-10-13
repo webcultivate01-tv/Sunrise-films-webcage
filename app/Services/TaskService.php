@@ -17,9 +17,9 @@ use App\Models\User;
  *
  * Admin and Manager share the assignment side of this service, and both now
  * have the same system-wide reach (module spec update): a Manager sees and
- * may assign work to every Employee, not just the ones they created. The
- * Employee side is a hard wall - every read and write there is proven to
- * belong to the signed-in Employee before anything happens to it.
+ * may assign work to every Editor, not just the ones they created. The
+ * Editor side is a hard wall - every read and write there is proven to
+ * belong to the signed-in Editor before anything happens to it.
  */
 final class TaskService
 {
@@ -38,9 +38,9 @@ final class TaskService
     }
 
     /**
-     * The Employees $actor may assign a task to (task spec s3): a Manager's
+     * The Editors $actor may assign a task to (task spec s3): a Manager's
      * scope was widened to match Admin, so both see and may assign work to
-     * every Employee in the system.
+     * every Editor in the system.
      *
      * @return list<User>
      */
@@ -472,7 +472,7 @@ final class TaskService
     {
         return TaskDescription::countsForTasks(array_map(static fn (Task $t): int => $t->id, $tasks));
     }
-    // === Employee: My Work =================================================
+    // === Editor: My Work =================================================
 
     public static function findForEmployee(User $employee, int $id): Task
     {

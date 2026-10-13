@@ -54,14 +54,27 @@ $selectedPhotographer = old($old, 'photographer_id', $project !== null ? (string
             <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div>
                     <label for="field-photographer" class="mb-1.5 block text-sm font-medium text-slate-700">Photographer</label>
-                    <select id="field-photographer" name="photographer_id" class="<?= input_classes($errors, 'photographer_id') ?>">
-                        <option value="">Select a photographer</option>
-                        <?php foreach ($photographers as $photographer): ?>
-                            <option value="<?= (int) $photographer->id ?>" <?= $selectedPhotographer === (string) $photographer->id ? 'selected' : '' ?>>
+                    <div class="relative" id="photographer-wrapper">
+                        <input type="text" id="photographer-search" autocomplete="off"
+                               placeholder="Search photographer…"
+                               class="<?= input_classes($errors, 'photographer_id') ?> cursor-pointer"
+                               value="<?php
+                                   foreach ($photographers as $p) {
+                                       if ((string)$p->id === $selectedPhotographer) { echo e($p->name); break; }
+                                   }
+                               ?>">
+                        <ul id="photographer-list"
+                            class="absolute z-20 mt-1 hidden max-h-52 w-full overflow-y-auto rounded-lg border border-line bg-white py-1 shadow-lg text-sm">
+                            <?php foreach ($photographers as $photographer): ?>
+                            <li class="photographer-option cursor-pointer px-3 py-2 hover:bg-brand-50 hover:text-brand-700"
+                                data-id="<?= (int) $photographer->id ?>"
+                                data-name="<?= e($photographer->name) ?>">
                                 <?= e($photographer->name) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
+                            </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                    <input type="hidden" id="field-photographer" name="photographer_id" value="<?= e($selectedPhotographer) ?>">
                     <?= field_error($errors, 'photographer_id') ?>
                 </div>
 
@@ -180,6 +193,42 @@ $selectedPhotographer = old($old, 'photographer_id', $project !== null ? (string
         </div>
     </form>
 </div>
+
+<script>
+(function () {
+    var search  = document.getElementById('photographer-search');
+    var list    = document.getElementById('photographer-list');
+    var hidden  = document.getElementById('field-photographer');
+    var items   = list ? Array.from(list.querySelectorAll('.photographer-option')) : [];
+
+    if (!search || !list || !hidden) return;
+
+    function show() { list.classList.remove('hidden'); }
+    function hide() { list.classList.add('hidden'); }
+
+    search.addEventListener('focus', show);
+    search.addEventListener('input', function () {
+        var q = this.value.toLowerCase();
+        items.forEach(function (li) {
+            li.style.display = li.dataset.name.toLowerCase().includes(q) ? '' : 'none';
+        });
+        show();
+    });
+
+    items.forEach(function (li) {
+        li.addEventListener('mousedown', function (e) {
+            e.preventDefault();
+            search.value  = li.dataset.name;
+            hidden.value  = li.dataset.id;
+            hide();
+        });
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!document.getElementById('photographer-wrapper').contains(e.target)) hide();
+    });
+})();
+</script>
 
 <?php if (!$isEdit): ?>
 <script>

@@ -17,7 +17,7 @@ use App\Models\User;
  */
 $isEdit = $account !== null;
 $action = $isEdit ? $baseUrl . '/' . $account->id : $baseUrl;
-$noun   = count($roles) > 1 ? 'User' : 'Employee';
+$noun   = 'Editor';
 ?>
 <div class="mb-5">
     <a href="<?= e($isEdit ? $baseUrl . '/' . $account->id : $baseUrl) ?>"

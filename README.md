@@ -1,6 +1,6 @@
 # Sunrise Films
 
-Role-based, token-authenticated access for **Admin**, **Manager** and **Employee**,
+Role-based, token-authenticated access for **Admin**, **Manager** and **Editor**,
 built to the functional specification in `docs/` terms: separate entry points, no public
 sign-up, hierarchical account creation, and hierarchical password reset.
 
@@ -8,7 +8,7 @@ Built so far:
 
 - **Authentication** — three entry points, token auth, forgot/reset password, account status.
 - **Photographer Management** — register, view, edit, search, deactivate and delete photographers.
-- **Employee Management** — create Manager and Employee accounts with role assignment,
+- **Editor Management** — create Manager and Editor accounts with role assignment,
   scoped listing and search, edit, password reset, deactivate and delete, plus a welcome
   email to every new account.
 
@@ -84,7 +84,7 @@ php tests/auth_check.php
 
 Runs the spec's acceptance criteria (§21) against the real database: login per role,
 cross-role refusal, token issue/tamper/revoke, account status, both password-reset paths
-and the single-use reset link. It creates a throwaway Manager and Employee and deletes
+and the single-use reset link. It creates a throwaway Manager and Editor and deletes
 them again, so it is safe to re-run.
 
 ---
@@ -94,8 +94,8 @@ them again, so it is safe to re-run.
 | Role | Login | Panel | Creates |
 |---|---|---|---|
 | Admin | `/admin` | `/admin/dashboard` | Managers |
-| Manager | `/manager` | `/manager/dashboard` | Employees |
-| Employee | `/employee` | `/employee/dashboard` | — |
+| Manager | `/manager` | `/manager/dashboard` | Editors |
+| Editor | `/editor` | `/editor/dashboard` | — |
 
 Each role's routes are generated from the same definitions in `routes/web.php`, so the
 three panels cannot drift apart. A token issued at one entry point carries its role and
@@ -130,9 +130,9 @@ anybody in or out.
 
 | Path | Who |
 |---|---|
-| Forgot Password (self-service) | Manager, Employee — and Admin only when `ADMIN_FORGOT_PASSWORD_ENABLED=true` |
+| Forgot Password (self-service) | Manager, Editor — and Admin only when `ADMIN_FORGOT_PASSWORD_ENABLED=true` |
 | Admin resets a Manager | `/admin/managers/{id}/password` |
-| Manager resets an Employee | `/manager/employees/{id}/password` |
+| Manager resets an Editor | `/manager/editors/{id}/password` |
 | Anyone changes their own | `/{panel}/profile` |
 
 Self-service reset links are single-use, expire after `RESET_TOKEN_LIFETIME` minutes, and
@@ -198,30 +198,30 @@ tests/           auth_check.php     authentication acceptance criteria
 
 ---
 
-## Photographer & Employee Management
+## Photographer & Editor Management
 
-Both modules are open to **Admin** and **Manager** and closed to **Employee**. That is
-enforced three times over: the routes are never registered on the `/employee` panel, the
+Both modules are open to **Admin** and **Manager** and closed to **Editor**. That is
+enforced three times over: the routes are never registered on the `/editor` panel, the
 `roles:admin,manager` middleware guards the group, and `UserService` / `PhotographerService`
 re-check scope on every read and write.
 
-| | Admin | Manager | Employee |
+| | Admin | Manager | Editor |
 |---|---|---|---|
 | Photographers — view / add / edit / search | yes | yes | no |
 | Photographers — deactivate | yes | yes | no |
 | Photographers — delete outright | yes | no | no |
-| Employees — view | all users | their own employees | no |
-| Employees — add Manager | yes | no | no |
-| Employees — add Employee | yes | yes | no |
-| Employees — edit / deactivate / reset password | in scope | in scope | no |
-| Employees — delete outright | yes | no | no |
+| Editors — view | all users | their own employees | no |
+| Editors — add Manager | yes | no | no |
+| Editors — add Editor | yes | yes | no |
+| Editors — edit / deactivate / reset password | in scope | in scope | no |
+| Editors — delete outright | yes | no | no |
 
 Notes on the decisions the spec left open:
 
 - **Deletion policy.** Deactivating is reversible and keeps history, so both roles may do
-  it; deleting destroys the record and is Admin-only. A Manager who still owns Employee
+  it; deleting destroys the record and is Admin-only. A Manager who still owns Editor
   accounts cannot be deleted — deactivate them instead, so their team is never orphaned.
-- **Manager scope.** A Manager sees and manages only the Employees they created. An Admin
+- **Manager scope.** A Manager sees and manages only the Editors they created. An Admin
   is system-wide. Photographers are shared: every Admin and Manager sees every photographer.
 - **Passwords.** The Add User form asks for no password (module spec s7). The system
   generates a temporary one, emails it with the welcome message, and shows it once to
@@ -267,7 +267,7 @@ thread rather than a field.
 Every signed-in panel (`app/Views/layouts/panel.php`) renders a single sidebar shell,
 built from the authenticated user's role — there is only one authentication system in
 this project. The sidebar lists Dashboard, the modules that are built and routed for that
-role (Photographer Management and Employee Management, for Admin and Manager), My Account,
+role (Photographer Management and Editor Management, for Admin and Manager), My Account,
 and the wider set of modules the product is heading toward (Work Management, Reports, ...).
 
 `app/Support/PanelModules.php` holds both lists: `BUILT` entries link to real controllers,

@@ -93,7 +93,7 @@ final class User
 
     /**
      * Every account is created by somebody: Admin creates Managers, Managers
-     * create Employees (spec s12). $createdBy is null only for the seeded Admin.
+     * create Editors (spec s12). $createdBy is null only for the seeded Admin.
      */
     public static function create(
         string $name,
@@ -137,7 +137,7 @@ final class User
     }
 
     /**
-     * The accounts an Employee Management panel may list: every user holding
+     * The accounts an Editor Management panel may list: every user holding
      * one of $roles, narrowed to the ones $ownerId created when the viewer is
      * a Manager rather than an Admin (module spec s12, s15).
      *
@@ -171,7 +171,7 @@ final class User
     }
 
     /**
-     * The Employee Report listing (Reports module): Managers and Employees
+     * The Editor Report listing (Reports module): Managers and Editors
      * only - never Admin accounts - narrowed by role, status, a date range on
      * `created_at` and a free-text search, newest first.
      *
@@ -226,7 +226,7 @@ final class User
 
     /**
      * How many accounts $ownerId created. Used before deleting a Manager: one
-     * that still owns Employees is deactivated instead, so their team is never
+     * that still owns Editors is deactivated instead, so their team is never
      * silently orphaned.
      */
     public static function countCreatedBy(int $ownerId): int
@@ -266,7 +266,7 @@ final class User
 
 
     /**
-     * An Admin or Manager editing an account from Employee Management
+     * An Admin or Manager editing an account from Editor Management
      * (module spec s12). Role, status and password are changed through their
      * own dedicated methods, never here.
      */

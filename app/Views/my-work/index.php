@@ -3,7 +3,7 @@
 use App\Models\Task;
 
 /**
- * My Work - the Employee's own tasks: active/completed/exited views, search
+ * My Work - the Editor's own tasks: active/completed/exited views, search
  * and filters (task spec s10, s11, s13).
  *
  * @var list<Task>            $tasks

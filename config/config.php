@@ -79,9 +79,9 @@ return [
             'dashboard' => '/manager/dashboard',
         ],
         'employee' => [
-            'label'     => 'Employee',
-            'login'     => '/employee',
-            'dashboard' => '/employee/dashboard',
+            'label'     => 'Editor',
+            'login'     => '/editor',
+            'dashboard' => '/editor/dashboard',
         ],
     ],
 ];

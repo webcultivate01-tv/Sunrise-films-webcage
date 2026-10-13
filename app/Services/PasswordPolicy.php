@@ -8,7 +8,7 @@ use App\Core\Validator;
 use App\Models\Setting;
 
 /**
- * One password policy for Admin, Manager and Employee alike (spec s9), so
+ * One password policy for Admin, Manager and Editor alike (spec s9), so
  * every place a password is set — creation, self-service reset, or a reset
  * performed by a superior — enforces exactly the same rules.
  */
@@ -68,7 +68,7 @@ final class PasswordPolicy
     }
 
     /**
-     * A temporary password for a newly created account. The Employee
+     * A temporary password for a newly created account. The Editor
      * Management form does not ask the creator for one (module spec s7), so
      * the system generates it, emails it with the welcome message and shows it
      * to the creator once.

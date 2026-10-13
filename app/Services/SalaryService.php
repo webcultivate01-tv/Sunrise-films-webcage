@@ -18,9 +18,9 @@ use PDOException;
  *
  * Admin and Manager share the settlement side of this service, and both now
  * have the same system-wide reach (module spec update): a Manager sees and
- * may settle salary for every Employee, not just the ones they created. The
- * Employee side ("My Salary") only ever reads or acts on the signed-in
- * Employee's own id, proven by the caller before any of the read-only
+ * may settle salary for every Editor, not just the ones they created. The
+ * Editor side ("My Salary") only ever reads or acts on the signed-in
+ * Editor's own id, proven by the caller before any of the read-only
  * aggregation methods below are reached.
  *
  * Earnings are never stored anywhere - they are always recomputed from the
@@ -44,8 +44,8 @@ final class SalaryService
     }
 
     /**
-     * The Employees $actor may view salary for: a Manager's scope was widened
-     * to match Admin, so both see every Employee in the system.
+     * The Editors $actor may view salary for: a Manager's scope was widened
+     * to match Admin, so both see every Editor in the system.
      *
      * @return list<User>
      */
@@ -115,7 +115,7 @@ final class SalaryService
         return SalarySettlement::findByIdempotencyKey($key);
     }
 
-    // === Employee: own settlements ==========================================
+    // === Editor: own settlements ==========================================
 
     public static function findOwnSettlementOrFail(User $employee, int $id): SalarySettlement
     {
@@ -131,7 +131,7 @@ final class SalaryService
     // === Read-only aggregation ===============================================
     // Every method below trusts $employeeId has already been authorized by the
     // caller (findEmployeeOrFail for Admin/Manager, or trivially the signed-in
-    // Employee's own id) - the same level of trust TaskService::myWork() places
+    // Editor's own id) - the same level of trust TaskService::myWork() places
     // in the employee id it is handed.
 
     /**
@@ -178,7 +178,7 @@ final class SalaryService
     }
 
     /**
-     * The Employee Salary List (spec s3): every employee in scope, narrowed
+     * The Editor Salary List (spec s3): every employee in scope, narrowed
      * by the search box, with the summary figures the list displays.
      *
      * $month optionally narrows the "this month" figures (earned/paid/
@@ -240,7 +240,7 @@ final class SalaryService
     }
 
     /**
-     * The month summary shown atop the Employee Salary List: what $actor's
+     * The month summary shown atop the Editor Salary List: what $actor's
      * whole scope earned in $month, what has already been paid against it,
      * and what is still left to pay - the same earned/paid figures each row
      * shows, just totalled across every employee in scope instead of one at
@@ -430,7 +430,7 @@ final class SalaryService
     }
 
     /**
-     * Employee-wise History (spec s13): one employee's own salary
+     * Editor-wise History (spec s13): one employee's own salary
      * transactions. $employeeId must already be authorized by the caller.
      *
      * @param array<string, string> $filters
@@ -588,12 +588,12 @@ final class SalaryService
         $pdf->text($right - 160, $y, 'Date: ' . date('j M Y', strtotime($settlement->settledAt)), 10);
         $y -= 30;
 
-        $pdf->text($left, $y, 'Employee', 11, true);
+        $pdf->text($left, $y, 'Editor', 11, true);
         $y -= 17;
 
         $employeeFields = [
             'Name'        => $settlement->employeeNameSnapshot,
-            'Employee ID' => 'EMP-' . str_pad((string) $settlement->employeeId, 4, '0', STR_PAD_LEFT),
+            'Editor ID' => 'EMP-' . str_pad((string) $settlement->employeeId, 4, '0', STR_PAD_LEFT),
             'Email'       => $settlement->employeeEmailSnapshot,
             'Mobile'      => $settlement->employeePhoneSnapshot ?? 'Not recorded',
         ];

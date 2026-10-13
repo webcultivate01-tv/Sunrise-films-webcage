@@ -19,7 +19,7 @@ final class PanelModules
             'icon'        => '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/>',
         ],
         'employee-management' => [
-            'label'       => 'Employee Management',
+            'label'       => 'Editor Management',
             'description' => 'Add employees, manage their details and control their access.',
             'icon'        => '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
         ],
@@ -52,7 +52,7 @@ final class PanelModules
 
     /**
      * Placeholder module ids shown on each role's panel, in sidebar order.
-     * Modules already covered by a real page (Photographer Management, Employee
+     * Modules already covered by a real page (Photographer Management, Editor
      * Management, the dashboard and the profile) are left out here so the
      * sidebar never lists the same thing twice.
      *
@@ -77,7 +77,7 @@ final class PanelModules
     private const BUILT = [
         'admin' => [
             ['id' => 'photographer-management', 'path' => '/photographers'],
-            ['id' => 'employee-management', 'path' => '/employees'],
+            ['id' => 'employee-management', 'path' => '/editors'],
             ['id' => 'work-management', 'path' => '/projects'],
             ['id' => 'task-management', 'path' => '/tasks'],
             ['id' => 'payments-management', 'path' => '/payments'],
@@ -86,7 +86,7 @@ final class PanelModules
         ],
         'manager' => [
             ['id' => 'photographer-management', 'path' => '/photographers'],
-            ['id' => 'employee-management', 'path' => '/employees'],
+            ['id' => 'employee-management', 'path' => '/editors'],
             ['id' => 'work-management', 'path' => '/projects'],
             ['id' => 'task-management', 'path' => '/tasks'],
             ['id' => 'payments-management', 'path' => '/payments'],

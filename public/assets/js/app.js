@@ -72,7 +72,7 @@
      * carries an empty <ul data-suggest-list>. As the user types, matching
      * records are fetched from the panel's own "/suggest" endpoint. By
      * default each result is a link that jumps straight to that record
-     * (the Customer, Employee, Work etc. search boxes); a wrapper marked
+     * (the Customer, Editor, Work etc. search boxes); a wrapper marked
      * data-suggest-mode="fill" instead fills the picked value straight into
      * the input without navigating, for filter fields like the Reports
      * search boxes that only feed a form.

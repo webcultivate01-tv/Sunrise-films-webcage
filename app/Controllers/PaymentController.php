@@ -39,15 +39,16 @@ final class PaymentController extends Controller
         $photographerId = $request->string('photographer_id');
 
         $this->view('payments.index', [
-            'title'          => 'Payment Management',
-            'baseUrl'        => $this->baseUrl($user),
-            'summary'        => PaymentService::dashboardSummary($user),
-            'rows'           => PaymentService::projectOverview($user, $search, $status, $photographerId !== '' ? (int) $photographerId : null),
-            'transactions'   => array_slice(PaymentService::history($user), 0, 10),
-            'search'         => $search,
-            'status'         => $status,
-            'photographerId' => $photographerId,
-            'photographers'  => Photographer::all(),
+            'title'           => 'Payment Management',
+            'baseUrl'         => $this->baseUrl($user),
+            'summary'         => PaymentService::dashboardSummary($user),
+            'rows'            => PaymentService::projectOverview($user, $search, $status, $photographerId !== '' ? (int) $photographerId : null),
+            'pendingProjects' => PaymentService::pendingProjects($user),
+            'transactions'    => array_slice(PaymentService::history($user), 0, 10),
+            'search'          => $search,
+            'status'          => $status,
+            'photographerId'  => $photographerId,
+            'photographers'   => Photographer::all(),
         ], 'panel');
     }
 
@@ -250,27 +251,18 @@ final class PaymentController extends Controller
     {
         $user    = $this->user();
         $payment = PaymentService::findOrFail($user, (int) $params['id']);
-        $project = Project::findById($payment->projectId);
-        $photographer = $payment->photographerId !== null ? Photographer::findById($payment->photographerId) : null;
+        $bill    = PaymentService::billFor($payment);
 
-        $collected = Payment::totalForProject($payment->projectId);
-        $total     = $project?->totalPayment ?? $payment->projectTotalPayment ?? 0.0;
-
+        // Everything below comes from the frozen bill, never from the live
+        // project / photographer rows.
         $this->view('payments.bill', [
-            'title'        => 'Bill ' . PaymentService::billReference($payment),
+            'title'        => 'Bill ' . $bill->reference,
             'baseUrl'      => $this->baseUrl($user),
-            'payment'      => $payment,
-            'project'      => $project,
-            'photographer' => $photographer,
-            'reference'    => PaymentService::billReference($payment),
-            'collected'    => $collected,
+            'bill'         => $bill,
             'backUrl'      => $this->baseUrl($user) . '/' . $payment->id,
             'downloadUrl'  => $this->baseUrl($user) . '/bills/' . $payment->id . '/download',
-            'whatsappUrl'  => whatsapp_url(
-                $photographer?->phone,
-                PaymentService::billWhatsAppMessage($payment, $total, $collected),
-            ),
-            'whatsappName' => $photographer?->name ?? $payment->photographerName,
+            'whatsappUrl'  => whatsapp_url($bill->photographerPhone, PaymentService::billWhatsAppMessage($bill)),
+            'whatsappName' => $bill->photographerName,
         ], 'panel');
     }
 
@@ -283,11 +275,12 @@ final class PaymentController extends Controller
     {
         $user    = $this->user();
         $payment = PaymentService::findOrFail($user, (int) $params['id']);
+        $bill    = PaymentService::billFor($payment);
 
         Response::binary(
-            PaymentService::generateBillPdf($payment),
+            PaymentService::generateBillPdf($bill),
             'application/pdf',
-            PaymentService::billReference($payment) . '.pdf',
+            $bill->reference . '.pdf',
         );
     }
 

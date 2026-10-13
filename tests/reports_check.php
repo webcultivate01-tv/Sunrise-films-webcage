@@ -5,7 +5,7 @@ declare(strict_types=1);
 /**
  * End-to-end check of the Reports module, run against the real database.
  *
- * It creates a throwaway Manager, Employee, Photographer, Project, Task,
+ * It creates a throwaway Manager, Editor, Photographer, Project, Task,
  * Payment and Salary Settlement, exercises Reports' access control, its filter
  * constraints and every per-report filter against them, confirms the two
  * drill-down reports refuse to run unfiltered, checks the summary and totals
@@ -137,7 +137,7 @@ try {
     $userIds[] = $manager->id;
 
     $employee = UserService::createAccount($manager, [
-        'name'     => 'Reports Employee',
+        'name'     => 'Reports Editor',
         'email'    => $employeeEmail,
         'phone'    => '+91 98765 43241',
         'address'  => '2 Indiranagar, Bengaluru 560038',
@@ -149,7 +149,7 @@ try {
     // A second employee, given no work at all - the control that proves one
     // employee's report never bleeds into another's.
     $otherEmployee = UserService::createAccount($manager, [
-        'name'     => 'Reports Other Employee',
+        'name'     => 'Reports Other Editor',
         'email'    => 'rep-other-' . $suffix . '@sunrisefilms.test',
         'phone'    => '+91 98765 43242',
         'address'  => '3 Jayanagar, Bengaluru 560041',
@@ -199,7 +199,7 @@ try {
     $paymentIds[] = $payment->id;
 
     // Complete the task so it credits salary, then settle it - fixtures for
-    // the Salary and Employee Work reports.
+    // the Salary and Editor Work reports.
     $accepted   = TaskService::accept($employee, $task);
     $inProgress = TaskService::updateProgress($employee, $accepted, 100);
     TaskService::complete($employee, $inProgress);
@@ -270,7 +270,7 @@ try {
     check('a manager is not a valid employee filter either', !$managerAsEmployeeFilter->isValid());
     check(
         'and it is refused with a message, not a 404 further down',
-        str_contains((string) $managerAsEmployeeFilter->firstError(), 'Only an Employee'),
+        str_contains((string) $managerAsEmployeeFilter->firstError(), 'Only an Editor'),
     );
 
     $badMonth = ReportService::filters(ReportService::TYPE_SALARY, ['month' => '2026-13']);
@@ -352,9 +352,9 @@ try {
     check('its status filter narrows the same photographer\'s work', $otherPhotographerWork['rows'] === []);
 
     // -----------------------------------------------------------------------
-    echo PHP_EOL . 'Reports - Employee Report' . PHP_EOL;
+    echo PHP_EOL . 'Reports - Editor Report' . PHP_EOL;
 
-    $employeeReport = report($admin, ReportService::TYPE_EMPLOYEES, ['q' => 'Reports Employee']);
+    $employeeReport = report($admin, ReportService::TYPE_EMPLOYEES, ['q' => 'Reports Editor']);
     check('employee report finds the fixture by search', count($employeeReport['rows']) === 1);
 
     $managerAsEmployee = report($admin, ReportService::TYPE_EMPLOYEES, [
@@ -363,11 +363,11 @@ try {
     check('employee report role filter excludes a manager when filtered to employees', $managerAsEmployee['rows'] === []);
 
     // -----------------------------------------------------------------------
-    echo PHP_EOL . 'Reports - Employee Work Report' . PHP_EOL;
+    echo PHP_EOL . 'Reports - Editor Work Report' . PHP_EOL;
 
     $employeeWork = report($admin, ReportService::TYPE_EMPLOYEE_WORK, ['employee_id' => (string) $employee->id]);
     check('employee work report lists the work given to that employee', count($employeeWork['rows']) === 1);
-    check('it names the employee it covers', str_contains($employeeWork['subtitle'], 'Reports Employee'));
+    check('it names the employee it covers', str_contains($employeeWork['subtitle'], 'Reports Editor'));
     check('it carries no summary block - the list of work is the report', $employeeWork['summary'] === []);
     check('it totals the work amounts', $employeeWork['totals'][10] === '5000.00');
 
@@ -379,7 +379,7 @@ try {
 
     $otherEmployeeWork = report($admin, ReportService::TYPE_EMPLOYEE_WORK, ['employee_id' => (string) $otherEmployee->id]);
     check('another employee\'s report does not include this employee\'s work', $otherEmployeeWork['rows'] === []);
-    check('and it names the employee it is actually about', str_contains($otherEmployeeWork['subtitle'], 'Reports Other Employee'));
+    check('and it names the employee it is actually about', str_contains($otherEmployeeWork['subtitle'], 'Reports Other Editor'));
     check('an employee with no work has nothing to total', $otherEmployeeWork['totals'] === null);
 
     // -----------------------------------------------------------------------

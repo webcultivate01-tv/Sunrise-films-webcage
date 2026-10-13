@@ -6,7 +6,7 @@ declare(strict_types=1);
  * End-to-end check of the Task Management acceptance criteria, run against
  * the real database.
  *
- * It creates a throwaway Manager, three Employees (two under that Manager,
+ * It creates a throwaway Manager, three Editors (two under that Manager,
  * one under the Admin directly, to prove the Manager's reach now matches the
  * Admin's), a Photographer and a Project, then exercises assignment, acceptance,
  * 10% progress steps, completion, salary crediting, exit and reassignment -
@@ -102,20 +102,20 @@ try {
     $userIds[] = $manager->id;
 
     $employee1 = UserService::createAccount($manager, [
-        'name' => 'Task Mgmt Employee One', 'email' => $employee1Mail, 'phone' => '+91 98765 43231',
+        'name' => 'Task Mgmt Editor One', 'email' => $employee1Mail, 'phone' => '+91 98765 43231',
         'address' => '2 Church Street, Bengaluru 560001', 'role' => User::ROLE_EMPLOYEE, 'password' => PasswordPolicy::generate(),
     ]);
     $userIds[] = $employee1->id;
 
     $employee2 = UserService::createAccount($manager, [
-        'name' => 'Task Mgmt Employee Two', 'email' => $employee2Mail, 'phone' => '+91 98765 43232',
+        'name' => 'Task Mgmt Editor Two', 'email' => $employee2Mail, 'phone' => '+91 98765 43232',
         'address' => '3 Brigade Road, Bengaluru 560001', 'role' => User::ROLE_EMPLOYEE, 'password' => PasswordPolicy::generate(),
     ]);
     $userIds[] = $employee2->id;
 
     // Created directly by the Admin, so out of the Manager's scope.
     $employee3 = UserService::createAccount($admin, [
-        'name' => 'Task Mgmt Employee Three', 'email' => $employee3Mail, 'phone' => '+91 98765 43233',
+        'name' => 'Task Mgmt Editor Three', 'email' => $employee3Mail, 'phone' => '+91 98765 43233',
         'address' => '4 Residency Road, Bengaluru 560025', 'role' => User::ROLE_EMPLOYEE, 'password' => PasswordPolicy::generate(),
     ]);
     $userIds[] = $employee3->id;

@@ -20,7 +20,7 @@ use App\Models\TaskDescription;
 $fields = [
     ['label' => 'Customer', 'value' => $task->customerName ?? 'Unknown customer', 'icon' => 'folder'],
     ['label' => 'Photographer', 'value' => $task->photographerName ?? 'Unknown photographer', 'icon' => 'user'],
-    ['label' => 'Employee', 'value' => $task->employeeName ?? 'Unknown employee', 'icon' => 'user'],
+    ['label' => 'Editor', 'value' => $task->employeeName ?? 'Unknown editor', 'icon' => 'user'],
     ['label' => 'Timeline', 'value' => date('j M Y', strtotime($task->startDate)) . ' - ' . date('j M Y', strtotime($task->endDate)), 'icon' => 'clock'],
     ['label' => 'Amount', 'value' => money($task->amount), 'icon' => 'cash'],
     ['label' => 'Assigned by', 'value' => $task->createdByName ?? 'Unknown', 'icon' => 'badge'],

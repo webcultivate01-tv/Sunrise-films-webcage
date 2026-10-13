@@ -28,7 +28,7 @@ $fields = [
 ?>
 <div class="mb-8 flex flex-wrap items-start justify-between gap-4">
     <div class="min-w-0">
-        <a href="<?= e($baseUrl) ?>" class="text-sm font-medium text-slate-500 underline-offset-2 hover:underline">&larr; Back to Employee Management</a>
+        <a href="<?= e($baseUrl) ?>" class="text-sm font-medium text-slate-500 underline-offset-2 hover:underline">&larr; Back to Editor Management</a>
         <div class="mt-3 flex items-center gap-4">
             <?php if ($account->photoUrl() !== null): ?>
                 <img src="<?= e($account->photoUrl()) ?>" alt="" class="h-12 w-12 shrink-0 rounded-full object-cover ring-1 ring-line">

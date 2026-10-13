@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Photographer;
+use App\Services\PaymentService;
 
 /**
  * Payment Management - the Payment Dashboard and Project Payment Overview
@@ -8,6 +9,7 @@ use App\Models\Photographer;
  *
  * @var array{totalProjectValue: float, totalCollected: float, totalOutstanding: float, advanceCollected: float, dueThisMonth: float, overduePayments: float, fullyPaid: int, partiallyPaid: int} $summary
  * @var list<array{project: \App\Models\Project, collected: float, outstanding: float, status: string, paymentsCount: int, lastPaymentDate: ?string}> $rows
+ * @var list<array{project: \App\Models\Project, collected: float, outstanding: float, status: string, paymentsCount: int, lastPaymentDate: ?string}> $pendingProjects
  * @var list<AppModelsPayment> $transactions Latest transactions, newest first.
  * @var string         $baseUrl
  * @var string         $search
@@ -16,6 +18,7 @@ use App\Models\Photographer;
  * @var list<Photographer> $photographers
  */
 $hasFilters = $search !== '' || $status !== '' || $photographerId !== '';
+$activeTab  = isset($_GET['tab']) && $_GET['tab'] === 'call-pending' ? 'call-pending' : 'overview';
 
 $filters = ['' => 'All statuses'];
 
@@ -54,6 +57,81 @@ $tiles = [
         </a>
     </div>
 </div>
+
+<!-- Tab bar -->
+<div class="mb-6 flex gap-1 border-b border-line">
+    <a href="<?= e($baseUrl) ?>"
+       class="px-4 py-2.5 text-sm font-semibold transition border-b-2 -mb-px
+              <?= $activeTab === 'overview' ? 'border-brand-600 text-brand-700' : 'border-transparent text-slate-500 hover:text-ink' ?>">
+        Overview
+    </a>
+    <a href="<?= e($baseUrl) ?>?tab=call-pending"
+       class="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold transition border-b-2 -mb-px
+              <?= $activeTab === 'call-pending' ? 'border-brand-600 text-brand-700' : 'border-transparent text-slate-500 hover:text-ink' ?>">
+        Call Pending
+        <?php if (count($pendingProjects) > 0): ?>
+            <span class="inline-flex items-center justify-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700">
+                <?= count($pendingProjects) ?>
+            </span>
+        <?php endif; ?>
+    </a>
+</div>
+
+<?php if ($activeTab === 'call-pending'): ?>
+<!-- ===== Call Pending Tab ===== -->
+<?php if ($pendingProjects === []): ?>
+    <div class="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center">
+        <p class="text-sm font-medium text-ink">No pending payments</p>
+        <p class="mt-1 text-sm text-slate-500">All projects are fully paid.</p>
+    </div>
+<?php else: ?>
+    <div class="overflow-x-auto rounded-xl border border-line bg-white">
+        <table class="min-w-full divide-y divide-line text-sm">
+            <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                <tr>
+                    <th scope="col" class="px-5 py-3 font-medium">Customer</th>
+                    <th scope="col" class="px-5 py-3 font-medium">Photographer</th>
+                    <th scope="col" class="px-5 py-3 font-medium">Total Value</th>
+                    <th scope="col" class="px-5 py-3 font-medium">Collected</th>
+                    <th scope="col" class="px-5 py-3 font-medium">Outstanding</th>
+                    <th scope="col" class="px-5 py-3 font-medium">Status</th>
+                    <th scope="col" class="px-5 py-3 text-right font-medium">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                <?php foreach ($pendingProjects as $row): ?>
+                    <?php $project = $row['project']; ?>
+                    <tr class="hover:bg-slate-50/70">
+                        <td class="px-5 py-3.5 font-medium text-ink"><?= e($project->customerName) ?></td>
+                        <td class="px-5 py-3.5 text-slate-600"><?= e($project->photographerName ?? 'Unknown') ?></td>
+                        <td class="px-5 py-3.5 text-slate-600"><?= e(money($project->totalPayment)) ?></td>
+                        <td class="px-5 py-3.5 text-slate-600"><?= e(money($row['collected'])) ?></td>
+                        <td class="px-5 py-3.5 font-semibold text-red-600"><?= e(money($row['outstanding'])) ?></td>
+                        <td class="px-5 py-3.5">
+                            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset <?= payment_status_badge($row['status']) ?>">
+                                <?= e(payment_status_label($row['status'])) ?>
+                            </span>
+                        </td>
+                        <td class="px-5 py-3.5">
+                            <div class="flex items-center justify-end gap-2">
+                                <a href="<?= e($baseUrl) ?>/history?project_id=<?= (int) $project->id ?>"
+                                   class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">
+                                    History
+                                </a>
+                                <a href="<?= e($baseUrl) ?>/create?project_id=<?= (int) $project->id ?>"
+                                   class="rounded-lg bg-brand-gradient px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:brightness-110">
+                                    Record Payment
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+<?php endif; ?>
+<?php else: ?>
+<!-- ===== Overview Tab ===== -->
 
 <div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7">
     <?php foreach ($tiles as $tile): ?>
@@ -230,3 +308,4 @@ $tiles = [
         </table>
     </div>
 <?php endif; ?>
+<?php endif; // end tab: overview vs call-pending ?>

@@ -100,7 +100,7 @@ try {
     $userIds[] = $manager->id;
 
     $employee = UserService::createAccount($manager, [
-        'name'     => 'Payment Mgmt Employee',
+        'name'     => 'Payment Mgmt Editor',
         'email'    => $employeeEmail,
         'phone'    => '+91 98765 43231',
         'address'  => '2 Church Street, Bengaluru 560001',
@@ -277,6 +277,30 @@ try {
     $found = PaymentService::findOrFail($admin, $advance->id);
     check('a payment can be loaded by id', $found->id === $advance->id);
     check('employee is refused a payment detail', refused(static fn () => PaymentService::findOrFail($employee, $advance->id)));
+
+    // -----------------------------------------------------------------------
+    echo PHP_EOL . 'Payment Management - issued bills are frozen' . PHP_EOL;
+
+    $bill = PaymentService::billFor($advance);
+
+    check('recording a payment issues its bill', $bill->paymentId === $advance->id && $bill->reference === PaymentService::billReference($advance));
+    check('the bill carries the payment type and method', $bill->paymentType === 'advance' && $bill->paymentMethod === 'cash');
+    check('the bill freezes the project total', $bill->projectTotal === 100000.0);
+    check('the advance bill shows only what was collected by then', $bill->collectedToDate === 30000.0 && $bill->outstanding === 70000.0);
+    check('the later bills show their own running totals', PaymentService::billFor($final)->collectedToDate === 100000.0
+        && PaymentService::billFor($final)->outstanding === 0.0);
+
+    Database::statement('UPDATE projects SET total_payment = 250000, customer_name = ? WHERE id = ?', ['Renamed Customer', $project->id]);
+    Database::statement('UPDATE photographers SET name = ?, phone = ? WHERE id = ?', ['Renamed Photographer', '+91 11111 00000', $photographer->id]);
+
+    $after = PaymentService::billFor($advance);
+
+    check('editing the project does not change an issued bill', $after->projectTotal === 100000.0
+        && $after->outstanding === 70000.0 && $after->customerName === 'Payment Mgmt Customer');
+    check('renaming the photographer does not change an issued bill', $after->photographerName === 'Payment Mgmt Photographer'
+        && $after->photographerPhone === '+91 99999 66666');
+    check('the bill PDF is built from the frozen bill', str_starts_with(PaymentService::generateBillPdf($after), '%PDF-')
+        && str_contains(PaymentService::generateBillPdf($after), 'Payment Mgmt Customer'));
 
     // -----------------------------------------------------------------------
     echo PHP_EOL . 'Payment Management - the financial trail is preserved' . PHP_EOL;

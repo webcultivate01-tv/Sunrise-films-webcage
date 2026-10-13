@@ -177,53 +177,49 @@ final class ProjectController extends Controller
     }
 
     /**
-     * GET /{panel}/projects/{id}/bill - the project Invoice/Bill.
+     * GET /{panel}/projects/{id}/bill - the project's bill, in the receipt
+     * format: the bill of its latest payment, which already carries the
+     * project total, everything collected up to that point and the balance
+     * still outstanding. A project with no payment yet has no bill to show.
      *
      * @param array<string, string> $params
      */
     public function billView(Request $request, array $params): never
     {
-        $user    = $this->user();
-        $project = ProjectService::findOrFail($user, (int) $params['id']);
-        $base    = $this->baseUrl($user);
-
-        $photographer = Photographer::findById($project->photographerId);
-        $summary      = PaymentService::projectSummary($user, $project);
-
-        $this->view('projects.bill', [
-            'title'        => 'Invoice ' . ProjectService::billReference($project),
-            'baseUrl'      => $base,
-            'project'      => $project,
-            'photographer' => $photographer,
-            'reference'    => ProjectService::billReference($project),
-            'summary'      => $summary,
-            'backUrl'      => $base . '/' . $project->id,
-            'downloadUrl'  => $base . '/' . $project->id . '/bill/download',
-            'whatsappUrl'  => whatsapp_url(
-                $photographer?->phone,
-                ProjectService::billWhatsAppMessage($project, $summary),
-            ),
-            'whatsappName' => $photographer?->name ?? $project->photographerName,
-        ], 'invoice');
+        $this->redirectToLatestBill($request, $params, '');
     }
 
     /**
-     * GET /{panel}/projects/{id}/bill/download - Download Invoice.
+     * GET /{panel}/projects/{id}/bill/download - the same bill's PDF.
      *
      * @param array<string, string> $params
      */
     public function billDownload(Request $request, array $params): never
     {
-        $user    = $this->user();
-        $project = ProjectService::findOrFail($user, (int) $params['id']);
-
-        Response::binary(
-            ProjectService::generateBillPdf($project),
-            'application/pdf',
-            ProjectService::billReference($project) . '.pdf',
-        );
+        $this->redirectToLatestBill($request, $params, '/download');
     }
 
+    /**
+     * @param array<string, string> $params
+     */
+    private function redirectToLatestBill(Request $request, array $params, string $suffix): never
+    {
+        $user     = $this->user();
+        $project  = ProjectService::findOrFail($user, (int) $params['id']);
+        $payments = Payment::timelineForProject($project->id);
+
+        if ($payments === []) {
+            $this->redirectWithFlash(
+                $this->baseUrl($user) . '/' . $project->id,
+                'error',
+                'No payment has been recorded for this project yet, so there is no bill to show.',
+            );
+        }
+
+        $latest = $payments[array_key_last($payments)];
+
+        Response::redirect($this->paymentsBaseUrl($user) . '/bills/' . $latest->id . $suffix);
+    }
     /**
      * GET /{panel}/projects/{id}/edit
      *

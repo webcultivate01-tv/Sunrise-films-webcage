@@ -1,29 +1,26 @@
 <?php
 
-use App\Models\Photographer;
-use App\Models\Payment;
-use App\Models\Project;
-use App\Models\Setting;
+use App\Models\PaymentBill;
 
 /**
  * View Bill - a read-only rendering of one payment's receipt, generated
- * automatically for an advance collected at project creation (Work
- * Management) and reachable from Payment Management for any payment.
+ * automatically when a payment is recorded (including the advance or full
+ * payment collected while adding a work in Work Management) and reachable
+ * from Payment Management for any payment.
  *
- * @var Payment       $payment
- * @var Project|null  $project
- * @var Photographer|null $photographer
- * @var string       $reference
- * @var float        $collected
+ * Every value comes from the frozen PaymentBill, never from the live project,
+ * photographer or company rows - an issued bill does not change.
+ *
+ * @var PaymentBill  $bill
  * @var string       $backUrl
  * @var string       $downloadUrl
  * @var ?string      $whatsappUrl
  * @var ?string      $whatsappName
  */
-$company     = Setting::current();
-$total       = $project?->totalPayment ?? $payment->projectTotalPayment ?? 0.0;
-$outstanding = max(0.0, $total - $collected);
+$company     = $bill;
+$outstanding = $bill->outstanding;
 $backLabel   = 'Back';
+$showDownload = false; // Print and Share on WhatsApp only
 ?>
 <?php require BASE_PATH . '/app/Views/partials/bill-actions.php'; ?>
 
@@ -35,11 +32,11 @@ $backLabel   = 'Back';
     <div class="flex flex-wrap items-center justify-between gap-4 bg-brand-50 px-8 py-4 text-sm">
         <div>
             <span class="font-semibold text-ink">Receipt No:</span>
-            <span class="text-slate-600"><?= e($reference) ?></span>
+            <span class="text-slate-600"><?= e($bill->reference) ?></span>
         </div>
         <div>
             <span class="font-semibold text-ink">Receipt Date:</span>
-            <span class="text-slate-600"><?= e(date('j M Y', strtotime($payment->paymentDate))) ?></span>
+            <span class="text-slate-600"><?= e(date('j M Y', strtotime($bill->billDate))) ?></span>
         </div>
     </div>
 
@@ -47,15 +44,17 @@ $backLabel   = 'Back';
     <div class="grid gap-6 border-b border-line px-8 py-6 sm:grid-cols-2">
         <div>
             <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Photographer</p>
-            <p class="mt-2 text-sm font-semibold text-ink"><?= e($payment->photographerName ?? 'Unknown photographer') ?></p>
-            <?php if ($photographer !== null): ?>
-                <p class="mt-1 text-sm text-slate-600"><?= e($photographer->phone) ?></p>
-                <p class="text-sm text-slate-600"><?= e($photographer->email) ?></p>
+            <p class="mt-2 text-sm font-semibold text-ink"><?= e($bill->photographerName ?? 'Unknown photographer') ?></p>
+            <?php if ($bill->photographerPhone !== null): ?>
+                <p class="mt-1 text-sm text-slate-600"><?= e($bill->photographerPhone) ?></p>
+            <?php endif; ?>
+            <?php if ($bill->photographerEmail !== null): ?>
+                <p class="text-sm text-slate-600"><?= e($bill->photographerEmail) ?></p>
             <?php endif; ?>
         </div>
         <div>
             <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Customer</p>
-            <p class="mt-2 text-sm font-semibold text-ink"><?= e($payment->customerName ?? 'Unknown customer') ?></p>
+            <p class="mt-2 text-sm font-semibold text-ink"><?= e($bill->customerName ?? 'Unknown customer') ?></p>
         </div>
     </div>
 
@@ -64,11 +63,11 @@ $backLabel   = 'Back';
         <dl class="divide-y divide-slate-100">
             <?php
             $rows = [
-                'Payment type'             => payment_type_label($payment->paymentType),
-                'Payment method'           => payment_method_label($payment->paymentMethod),
-                'Amount received'          => money($payment->amount),
-                'Project total value'      => money($total),
-                'Total collected to date'  => money($collected),
+                'Payment type'             => payment_type_label($bill->paymentType),
+                'Payment method'           => payment_method_label($bill->paymentMethod),
+                'Amount received'          => money($bill->amount),
+                'Project total value'      => money($bill->projectTotal),
+                'Total collected to date'  => money($bill->collectedToDate),
             ];
             ?>
             <?php foreach ($rows as $label => $value): ?>
@@ -86,10 +85,10 @@ $backLabel   = 'Back';
             </span>
         </div>
 
-        <?php if ($payment->notes !== null && $payment->notes !== ''): ?>
+        <?php if ($bill->notes !== null && $bill->notes !== ''): ?>
             <div class="mt-5 border-t border-line pt-4">
                 <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Notes</p>
-                <p class="mt-1 whitespace-pre-line text-sm text-ink"><?= e($payment->notes) ?></p>
+                <p class="mt-1 whitespace-pre-line text-sm text-ink"><?= e($bill->notes) ?></p>
             </div>
         <?php endif; ?>
     </div>

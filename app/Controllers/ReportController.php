@@ -15,7 +15,7 @@ use App\Services\ReportFilters;
 use App\Services\ReportService;
 
 /**
- * Reports: one page of report cards (Photographers, their work, Employees,
+ * Reports: one page of report cards (Photographers, their work, Editors,
  * their work, Projects, Tasks, Payments, Salary), each generated from its own
  * filters, previewed on screen and downloadable as PDF or Excel. Admin and
  * Manager share this controller and see the same studio-wide data every other

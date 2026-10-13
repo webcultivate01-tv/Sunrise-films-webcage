@@ -125,7 +125,7 @@ final class PasswordResetService
         $user = User::findById((int) $row['user_id']);
 
         // The link is bound to the role whose entry point issued it, so a
-        // Manager's link cannot be redeemed on the Employee page.
+        // Manager's link cannot be redeemed on the Editor page.
         if ($user === null || $user->role !== $role || !$user->isActive()) {
             return null;
         }

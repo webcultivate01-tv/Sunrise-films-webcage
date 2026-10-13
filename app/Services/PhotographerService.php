@@ -15,11 +15,11 @@ use App\Models\User;
  *
  * Admins and Managers both have full reach over the photographer list: module spec
  * s13 grants View, Add, Edit and Search to each of them without qualification,
- * so - unlike Employee Management - there is no per-manager ownership filter.
+ * so - unlike Editor Management - there is no per-manager ownership filter.
  * The one place the two roles differ is removal: a Manager may deactivate a
  * photographer, only an Admin may delete the record outright.
  *
- * Employees have no access to this module at all (module spec s2).
+ * Editors have no access to this module at all (module spec s2).
  */
 final class PhotographerService
 {

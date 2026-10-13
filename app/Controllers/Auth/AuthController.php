@@ -18,13 +18,13 @@ use App\Services\PasswordResetService;
  * Login, logout and the Forgot Password flow for every role.
  *
  * One controller serves all three entry points: the role comes from the route
- * (spec s2), which is what keeps /admin, /manager and /employee behaving
+ * (spec s2), which is what keeps /admin, /manager and /editor behaving
  * identically apart from the account they will accept.
  */
 final class AuthController extends Controller
 {
     /**
-     * GET /admin, /manager, /employee
+     * GET /admin, /manager, /editor
      */
     public function showLogin(Request $request, array $params): never
     {

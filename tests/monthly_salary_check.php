@@ -6,7 +6,7 @@ declare(strict_types=1);
  * End-to-end check of the Monthly Salary acceptance criteria, run against the
  * real database.
  *
- * It creates a throwaway Manager with two Employees, and an Employee created
+ * It creates a throwaway Manager with two Editors, and an Editor created
  * directly by the Admin (to prove the Manager's reach now matches the
  * Admin's), gives each employee completed, salary-eligible tasks, then
  * exercises the salary list, monthly breakdown,
@@ -105,20 +105,20 @@ try {
     $userIds[] = $manager->id;
 
     $employee1 = UserService::createAccount($manager, [
-        'name' => 'Salary Mgmt Employee One', 'email' => $employee1Mail, 'phone' => '+91 98765 43241',
+        'name' => 'Salary Mgmt Editor One', 'email' => $employee1Mail, 'phone' => '+91 98765 43241',
         'address' => '2 Church Street, Bengaluru 560001', 'role' => User::ROLE_EMPLOYEE, 'password' => PasswordPolicy::generate(),
     ]);
     $userIds[] = $employee1->id;
 
     $employee2 = UserService::createAccount($manager, [
-        'name' => 'Salary Mgmt Employee Two', 'email' => $employee2Mail, 'phone' => '+91 98765 43242',
+        'name' => 'Salary Mgmt Editor Two', 'email' => $employee2Mail, 'phone' => '+91 98765 43242',
         'address' => '3 Brigade Road, Bengaluru 560001', 'role' => User::ROLE_EMPLOYEE, 'password' => PasswordPolicy::generate(),
     ]);
     $userIds[] = $employee2->id;
 
     // Created directly by the Admin, so out of the Manager's scope.
     $employee3 = UserService::createAccount($admin, [
-        'name' => 'Salary Mgmt Employee Three', 'email' => $employee3Mail, 'phone' => '+91 98765 43243',
+        'name' => 'Salary Mgmt Editor Three', 'email' => $employee3Mail, 'phone' => '+91 98765 43243',
         'address' => '4 Residency Road, Bengaluru 560025', 'role' => User::ROLE_EMPLOYEE, 'password' => PasswordPolicy::generate(),
     ]);
     $userIds[] = $employee3->id;
@@ -179,11 +179,11 @@ try {
     $adminRows = array_map(static fn (array $r): int => $r['employee']->id, SalaryService::listEmployees($admin));
     check('admin salary list includes every employee', in_array($employee1->id, $adminRows, true) && in_array($employee3->id, $adminRows, true));
 
-    $suggestedEmployees = SalaryService::suggestEmployees($admin, 'Salary Mgmt Employee One');
+    $suggestedEmployees = SalaryService::suggestEmployees($admin, 'Salary Mgmt Editor One');
     check('suggest returns the matching employee', count($suggestedEmployees) === 1 && $suggestedEmployees[0]['employee']->id === $employee1->id);
     check('an empty search suggests no employees', SalaryService::suggestEmployees($admin, '') === []);
 
-    $suggestedManagerScope = SalaryService::suggestEmployees($manager, 'Salary Mgmt Employee Three');
+    $suggestedManagerScope = SalaryService::suggestEmployees($manager, 'Salary Mgmt Editor Three');
     check('manager employee suggestions surface employees system-wide', count($suggestedManagerScope) === 1 && $suggestedManagerScope[0]['employee']->id === $employee3->id);
 
     // -------------------------------------------------------------------------
@@ -321,12 +321,12 @@ try {
     check('the type filter narrows history to settlements only', $settlementOnly !== []
         && array_reduce($settlementOnly, static fn (bool $c, array $e): bool => $c && $e['type'] === 'settlement', true));
 
-    $suggestedHistory = SalaryService::suggestHistory($admin, 'Salary Mgmt Employee One');
+    $suggestedHistory = SalaryService::suggestHistory($admin, 'Salary Mgmt Editor One');
     check('history suggestions match the employee search', $suggestedHistory !== []
         && array_reduce($suggestedHistory, static fn (bool $c, array $e): bool => $c && $e['employeeId'] === $employee1->id, true));
     check('an empty search suggests no history', SalaryService::suggestHistory($admin, '') === []);
 
-    $suggestedHistoryScope = SalaryService::suggestHistory($manager, 'Salary Mgmt Employee Three');
+    $suggestedHistoryScope = SalaryService::suggestHistory($manager, 'Salary Mgmt Editor Three');
     check('manager history suggestions surface employees system-wide', $suggestedHistoryScope !== []
         && array_reduce($suggestedHistoryScope, static fn (bool $c, array $e): bool => $c && $e['employeeId'] === $employee3->id, true));
 } finally {

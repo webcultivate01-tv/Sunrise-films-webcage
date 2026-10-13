@@ -6,7 +6,7 @@ declare(strict_types=1);
  * End-to-end check of the authentication acceptance criteria (spec s21),
  * run against the real database.
  *
- * It creates a throwaway Manager and Employee, exercises login, role
+ * It creates a throwaway Manager and Editor, exercises login, role
  * restriction, tokens, logout, account status and both password-reset paths,
  * then deletes everything it created.
  *
@@ -109,7 +109,7 @@ try {
         UserService::assignableRoles($manager) === [User::ROLE_EMPLOYEE]);
 
     $employee   = UserService::createAccount($manager, [
-        'name'     => 'Check Employee',
+        'name'     => 'Check Editor',
         'email'    => $employeeEmail,
         'phone'    => '9876501234',
         'address'  => '2 Check Street',

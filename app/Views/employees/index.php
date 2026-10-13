@@ -4,7 +4,7 @@ use App\Core\Config;
 use App\Models\User;
 
 /**
- * Employee Management - the list, search box and row actions
+ * Editor Management - the list, search box and row actions
  * (module spec s12, s16).
  *
  * @var list<User>   $people
@@ -16,11 +16,11 @@ use App\Models\User;
  * @var User         $authUser
  */
 $isAdmin   = $authUser->role === User::ROLE_ADMIN;
-$noun      = $isAdmin ? 'user' : 'employee';
+$noun      = 'editor';
 $hasSearch = $search !== '';
 
-// The Employees / Managers tabs only make sense when this user manages more
-// than one role - a Manager only ever sees Employees, so they get no tabs.
+// The Editors / Managers tabs only make sense when this user manages more
+// than one role - a Manager only ever sees Editors, so they get no tabs.
 $roleTabs = [];
 
 if (count($roles) > 1) {
@@ -39,7 +39,7 @@ $tabUrl = static function (string $role) use ($baseUrl, $search): string {
 ?>
 <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
     <div>
-        <h1 class="text-2xl font-semibold tracking-tight text-ink">Employee Management</h1>
+        <h1 class="text-2xl font-semibold tracking-tight text-ink">Editor Management</h1>
         <p class="mt-1 text-sm text-slate-500">
             <?= count($people) ?> <?= e($noun) ?><?= count($people) === 1 ? '' : 's' ?>
             <?= $hasSearch ? 'matching your search' : ($isAdmin ? 'across the system' : 'in your team') ?>.

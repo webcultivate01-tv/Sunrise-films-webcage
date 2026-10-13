@@ -180,7 +180,7 @@ $hasFilters = $q !== '' || $projectId !== '' || $employeeId !== '' || $priority 
                 <tr>
                     <th scope="col" class="w-12 px-5 py-3 font-medium">No</th>
                     <th scope="col" class="px-5 py-3 font-medium">Task</th>
-                    <th scope="col" class="px-5 py-3 font-medium">Employee</th>
+                    <th scope="col" class="px-5 py-3 font-medium">Editor</th>
                     <th scope="col" class="px-5 py-3 font-medium">Priority</th>
                     <th scope="col" class="px-5 py-3 font-medium">Timeline</th>
                     <th scope="col" class="px-5 py-3 font-medium">Amount</th>

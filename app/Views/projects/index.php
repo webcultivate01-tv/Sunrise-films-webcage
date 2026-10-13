@@ -123,9 +123,9 @@ $sorts = [
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
-                <?php foreach ($projects as $project): ?>
+                <?php foreach ($projects as $rowNumber => $project): ?>
                     <tr class="hover:bg-slate-50/70">
-                        <td class="px-5 py-3.5 tabular-nums text-slate-500"><?= (int) $project->serialNo ?></td>
+                        <td class="px-5 py-3.5 tabular-nums text-slate-500"><?= $rowNumber + 1 ?></td>
                         <td class="px-5 py-3.5">
                             <a href="<?= e($baseUrl) ?>/<?= (int) $project->id ?>"
                                class="font-medium text-ink underline-offset-2 hover:underline"><?= e($project->customerName) ?></a>

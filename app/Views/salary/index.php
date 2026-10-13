@@ -3,7 +3,7 @@
 use App\Models\User;
 
 /**
- * Monthly Salary - the Employee Salary List (spec s3).
+ * Monthly Salary - the Editor Salary List (spec s3).
  *
  * @var list<array{employee: User, earned: float, paid: float, outstanding: float, status: string, currentMonthEarned: float, periodPaid: float, periodOutstanding: float, periodStatus: string}> $rows
  * @var string $baseUrl
@@ -82,7 +82,7 @@ $monthLabel = pretty_month($summary['month']);
             <?= $hasFilters ? 'No matches for your filters' : 'No employees in scope yet' ?>
         </p>
         <p class="mt-1 text-sm text-slate-500">
-            <?= $hasFilters ? 'Try a different name, ID, email or month.' : 'Employees you manage will appear here.' ?>
+            <?= $hasFilters ? 'Try a different name, ID, email or month.' : 'Editors you manage will appear here.' ?>
         </p>
     </div>
 <?php else: ?>
@@ -91,7 +91,7 @@ $monthLabel = pretty_month($summary['month']);
             <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                 <tr>
                     <th scope="col" class="w-12 px-5 py-3 font-medium">No</th>
-                    <th scope="col" class="px-5 py-3 font-medium">Employee</th>
+                    <th scope="col" class="px-5 py-3 font-medium">Editor</th>
                     <th scope="col" class="px-5 py-3 font-medium"><?= $hasMonth ? e($monthLabel) . ' earned' : 'This month' ?></th>
                     <th scope="col" class="px-5 py-3 font-medium"><?= $hasMonth ? e($monthLabel) . ' paid' : 'Total paid' ?></th>
                     <th scope="col" class="px-5 py-3 font-medium"><?= $hasMonth ? e($monthLabel) . ' outstanding' : 'Outstanding' ?></th>

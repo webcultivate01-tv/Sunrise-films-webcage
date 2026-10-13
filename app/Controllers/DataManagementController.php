@@ -13,7 +13,8 @@ use App\Services\PasswordPolicy;
 /**
  * Admin-only: permanently delete one module's data, or the whole system's.
  * Deletion needs the admin's password and a typed confirmation, and cannot be
- * undone.
+ * undone. An optional date range narrows the deletion to records created
+ * within that window.
  */
 final class DataManagementController extends Controller
 {
@@ -45,11 +46,26 @@ final class DataManagementController extends Controller
         $module       = (string) $request->input('module', '');
         $confirmation = trim((string) $request->input('confirmation', ''));
         $password     = (string) $request->input('password', '');
+        $from         = trim((string) $request->input('date_from', ''));
+        $to           = trim((string) $request->input('date_to', ''));
+        $useRange     = $from !== '' || $to !== '';
 
         $errors = [];
 
         if (!DataPurgeService::exists($module)) {
             $errors['module'] = 'Please choose what to delete.';
+        }
+
+        if ($useRange) {
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $from)) {
+                $errors['date_from'] = 'Enter a valid from date.';
+            }
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $to)) {
+                $errors['date_to'] = 'Enter a valid to date.';
+            }
+            if (!isset($errors['date_from'], $errors['date_to']) && $from > $to) {
+                $errors['date_to'] = 'To date must be on or after the from date.';
+            }
         }
 
         if ($confirmation !== 'DELETE') {
@@ -61,16 +77,29 @@ final class DataManagementController extends Controller
         }
 
         if ($errors !== []) {
-            $this->redirectWithErrors($url, $errors, ['module' => $module]);
+            $this->redirectWithErrors($url, $errors, array_filter([
+                'module'    => $module,
+                'date_from' => $from,
+                'date_to'   => $to,
+            ]));
         }
 
-        $label   = DataPurgeService::modules()[$module]['label'];
-        $deleted = DataPurgeService::purge($module);
+        $label = DataPurgeService::modules()[$module]['label'];
 
-        $this->redirectWithFlash(
-            $url,
-            'success',
-            sprintf('%s data deleted permanently (%d %s removed).', $label, $deleted, $deleted === 1 ? 'record' : 'records'),
-        );
+        if ($useRange) {
+            $deleted = DataPurgeService::purgeByDateRange($module, $from, $to);
+            $message = sprintf(
+                '%s data from %s to %s deleted permanently (%d %s removed).',
+                $label, $from, $to, $deleted, $deleted === 1 ? 'record' : 'records',
+            );
+        } else {
+            $deleted = DataPurgeService::purge($module);
+            $message = sprintf(
+                '%s data deleted permanently (%d %s removed).',
+                $label, $deleted, $deleted === 1 ? 'record' : 'records',
+            );
+        }
+
+        $this->redirectWithFlash($url, 'success', $message);
     }
 }

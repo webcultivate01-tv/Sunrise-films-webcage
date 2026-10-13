@@ -44,32 +44,67 @@ use App\Models\User;
 
             <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div>
-                    <label for="field-project" class="mb-1.5 block text-sm font-medium text-slate-700">Project (customer)</label>
-                    <select id="field-project" name="project_id" data-project-description-source
-                            class="<?= input_classes($errors, 'project_id') ?>">
-                        <option value="">Select a project</option>
-                        <?php foreach ($projects as $project): ?>
-                            <option value="<?= (int) $project->id ?>" data-description="<?= e($project->description) ?>" data-deadline="<?= e(substr($project->deadline, 0, 10)) ?>"
-                                    <?= old($old, 'project_id') === (string) $project->id ? 'selected' : '' ?>>
+                    <label for="project-search" class="mb-1.5 block text-sm font-medium text-slate-700">Project (customer)</label>
+                    <div class="relative" id="project-wrapper">
+                        <input type="text" id="project-search" autocomplete="off"
+                               placeholder="Search project…"
+                               class="<?= input_classes($errors, 'project_id') ?>"
+                               value="<?php
+                                   $oldPid = old($old, 'project_id');
+                                   foreach ($projects as $p) {
+                                       if ((string)$p->id === $oldPid) {
+                                           echo e($p->customerName . ' - ' . ($p->photographerName ?? 'Unknown photographer'));
+                                           break;
+                                       }
+                                   }
+                               ?>">
+                        <ul id="project-list"
+                            class="absolute z-20 mt-1 hidden max-h-52 w-full overflow-y-auto rounded-lg border border-line bg-white py-1 shadow-lg text-sm">
+                            <?php foreach ($projects as $project): ?>
+                            <li class="project-option cursor-pointer px-3 py-2 hover:bg-brand-50 hover:text-brand-700"
+                                data-id="<?= (int) $project->id ?>"
+                                data-name="<?= e($project->customerName . ' - ' . ($project->photographerName ?? 'Unknown photographer')) ?>"
+                                data-description="<?= e($project->description) ?>"
+                                data-deadline="<?= e(substr($project->deadline ?? '', 0, 10)) ?>">
                                 <?= e($project->customerName) ?> - <?= e($project->photographerName ?? 'Unknown photographer') ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
+                            </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                    <input type="hidden" id="field-project" name="project_id" value="<?= e(old($old, 'project_id')) ?>">
                     <?= field_error($errors, 'project_id') ?>
                 </div>
 
                 <div>
-                    <label for="field-employee" class="mb-1.5 block text-sm font-medium text-slate-700">Employee</label>
-                    <select id="field-employee" name="employee_id" class="<?= input_classes($errors, 'employee_id') ?>">
-                        <option value="">Select an employee</option>
-                        <?php foreach ($employees as $employee): ?>
-                            <option value="<?= (int) $employee->id ?>"
-                                    data-percentage="<?= $employee->percentage !== null ? e((string) $employee->percentage) : '' ?>"
-                                    <?= old($old, 'employee_id') === (string) $employee->id ? 'selected' : '' ?>>
-                                <?= e($employee->name) ?><?= $employee->percentage !== null ? ' (' . e(rtrim(rtrim(number_format($employee->percentage, 2, '.', ''), '0'), '.')) . '%)' : ' (no percentage set)' ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
+                    <label for="employee-search" class="mb-1.5 block text-sm font-medium text-slate-700">Editor</label>
+                    <div class="relative" id="employee-wrapper">
+                        <input type="text" id="employee-search" autocomplete="off"
+                               placeholder="Search editor…"
+                               class="<?= input_classes($errors, 'employee_id') ?>"
+                               value="<?php
+                                   $oldEid = old($old, 'employee_id');
+                                   foreach ($employees as $emp) {
+                                       if ((string)$emp->id === $oldEid) {
+                                           $pctLabel = $emp->percentage !== null ? ' (' . rtrim(rtrim(number_format($emp->percentage, 2, '.', ''), '0'), '.') . '%)' : ' (no percentage set)';
+                                           echo e($emp->name . $pctLabel);
+                                           break;
+                                       }
+                                   }
+                               ?>">
+                        <ul id="employee-list"
+                            class="absolute z-20 mt-1 hidden max-h-52 w-full overflow-y-auto rounded-lg border border-line bg-white py-1 shadow-lg text-sm">
+                            <?php foreach ($employees as $emp): ?>
+                            <?php $pctLabel = $emp->percentage !== null ? ' (' . rtrim(rtrim(number_format($emp->percentage, 2, '.', ''), '0'), '.') . '%)' : ' (no percentage set)'; ?>
+                            <li class="employee-option cursor-pointer px-3 py-2 hover:bg-brand-50 hover:text-brand-700"
+                                data-id="<?= (int) $emp->id ?>"
+                                data-name="<?= e($emp->name . $pctLabel) ?>"
+                                data-percentage="<?= $emp->percentage !== null ? e((string) $emp->percentage) : '' ?>">
+                                <?= e($emp->name) ?><span class="text-slate-400"><?= e($pctLabel) ?></span>
+                            </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                    <input type="hidden" id="field-employee" name="employee_id" value="<?= e(old($old, 'employee_id')) ?>">
                     <?= field_error($errors, 'employee_id') ?>
                     <?php if ($employees === []): ?>
                         <p class="mt-1.5 text-xs text-amber-600">You have no employees to assign work to yet.</p>
@@ -153,28 +188,81 @@ use App\Models\User;
 </div>
 
 <script>
-    (function () {
-        var employee = document.getElementById('field-employee');
-        var cost     = document.getElementById('field-cost');
-        var preview  = document.getElementById('task-amount-preview');
-        if (!employee || !cost || !preview) return;
+(function () {
+    /* ── generic searchable dropdown ── */
+    function makeSearchable(wrapperId, listId, searchId, hiddenId, onPick) {
+        var wrapper = document.getElementById(wrapperId);
+        var list    = document.getElementById(listId);
+        var search  = document.getElementById(searchId);
+        var hidden  = document.getElementById(hiddenId);
+        if (!wrapper || !list || !search || !hidden) return;
+        var items = Array.from(list.querySelectorAll('li'));
 
-        function update() {
-            var option = employee.options[employee.selectedIndex];
-            var pct    = option ? parseFloat(option.getAttribute('data-percentage')) : NaN;
-            var total  = parseFloat(cost.value);
+        function show() { list.classList.remove('hidden'); }
+        function hide() { list.classList.add('hidden'); }
 
-            if (isNaN(pct) || isNaN(total)) {
-                preview.textContent = '-';
-                return;
-            }
-            preview.textContent = '₹' + (Math.round(total * pct) / 100).toLocaleString('en-IN', {
-                minimumFractionDigits: 2, maximumFractionDigits: 2
+        search.addEventListener('focus', show);
+        search.addEventListener('input', function () {
+            var q = this.value.toLowerCase();
+            items.forEach(function (li) {
+                li.style.display = li.dataset.name.toLowerCase().includes(q) ? '' : 'none';
             });
-        }
+            show();
+        });
+        items.forEach(function (li) {
+            li.addEventListener('mousedown', function (e) {
+                e.preventDefault();
+                search.value = li.dataset.name;
+                hidden.value = li.dataset.id;
+                hide();
+                if (onPick) onPick(li);
+            });
+        });
+        document.addEventListener('click', function (e) {
+            if (!wrapper.contains(e.target)) hide();
+        });
+    }
 
-        employee.addEventListener('change', update);
-        cost.addEventListener('input', update);
-        update();
+    /* ── project: auto-fill description + deadline ── */
+    var descField     = document.querySelector('[data-project-description-target]');
+    var endDateField  = document.getElementById('field-end');
+
+    makeSearchable('project-wrapper', 'project-list', 'project-search', 'field-project', function (li) {
+        if (descField && li.dataset.description && !descField.value) {
+            descField.value = li.dataset.description;
+        }
+        if (endDateField && li.dataset.deadline && !endDateField.value) {
+            endDateField.value = li.dataset.deadline;
+        }
+    });
+
+    /* ── employee: update task-amount preview ── */
+    var cost    = document.getElementById('field-cost');
+    var preview = document.getElementById('task-amount-preview');
+    var empHidden = document.getElementById('field-employee');
+
+    function updateAmount(pct) {
+        if (!preview || !cost) return;
+        var total = parseFloat(cost.value);
+        if (isNaN(pct) || isNaN(total)) { preview.textContent = '-'; return; }
+        preview.textContent = '₹' + (Math.round(total * pct) / 100).toLocaleString('en-IN', {
+            minimumFractionDigits: 2, maximumFractionDigits: 2
+        });
+    }
+
+    var _currentPct = NaN;
+    makeSearchable('employee-wrapper', 'employee-list', 'employee-search', 'field-employee', function (li) {
+        _currentPct = parseFloat(li.dataset.percentage);
+        updateAmount(_currentPct);
+    });
+
+    if (cost) cost.addEventListener('input', function () { updateAmount(_currentPct); });
+
+    /* seed preview if old value was repopulated */
+    (function () {
+        if (!empHidden || !empHidden.value) return;
+        var li = document.querySelector('#employee-list [data-id="' + empHidden.value + '"]');
+        if (li) { _currentPct = parseFloat(li.dataset.percentage); updateAmount(_currentPct); }
     })();
+})();
 </script>

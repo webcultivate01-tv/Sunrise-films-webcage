@@ -9,8 +9,8 @@ use App\Models\User;
 
 /**
  * The welcome email a new account receives (module spec s11). It goes out for
- * every account Employee Management creates - a Manager created by an Admin,
- * an Employee created by an Admin, an Employee created by a Manager - and
+ * every account Editor Management creates - a Manager created by an Admin,
+ * an Editor created by an Admin, an Editor created by a Manager - and
  * carries the one-time password the system generated for them.
  *
  * Delivery itself is MailService's job, so switching from the development

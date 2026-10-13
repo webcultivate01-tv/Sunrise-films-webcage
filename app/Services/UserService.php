@@ -12,12 +12,12 @@ use App\Models\User;
 /**
  * Who may create and manage whom (module spec s8, s12, s15, updated).
  *
- *   Admin    -> Manager and Employee, anywhere in the system
- *   Manager  -> Employee only, but every Employee in the system (the same
+ *   Admin    -> Manager and Editor, anywhere in the system
+ *   Manager  -> Editor only, but every Editor in the system (the same
  *               reach as Admin) - not just the ones they created
- *   Employee -> nobody, and no access to the module at all
+ *   Editor -> nobody, and no access to the module at all
  *
- * Every read and write in Employee Management goes through the scope checks
+ * Every read and write in Editor Management goes through the scope checks
  * here, so a controller or a view cannot widen them by accident. In particular
  * a Manager must never be able to create or assign the Manager role
  * (module spec s8), and that rule lives in exactly one place: assignableRoles().
@@ -42,8 +42,8 @@ final class UserService
     }
 
     /**
-     * Whether $actor may open Employee Management and Photographer Management at
-     * all. Employees may not (module spec s2, s6).
+     * Whether $actor may open Editor Management and Photographer Management at
+     * all. Editors may not (module spec s2, s6).
      */
     public static function managesPeople(User $actor): bool
     {
@@ -54,7 +54,7 @@ final class UserService
      * A Manager's scope was widened to match Admin: both now see every
      * account in the roles they may manage (module spec update - Manager gets
      * full read/add/edit reach, the same as Admin). What still tells them
-     * apart is assignableRoles() (a Manager may only ever touch Employees) and
+     * apart is assignableRoles() (a Manager may only ever touch Editors) and
      * canDelete() (only an Admin may remove a record outright). Returns the
      * owner id a query should filter on, or null for "no ownership filter".
      */
@@ -74,7 +74,7 @@ final class UserService
 
     /**
      * The accounts $actor may list, optionally narrowed by the search box
-     * (module spec s16) and by a role filter (e.g. the Employees /
+     * (module spec s16) and by a role filter (e.g. the Editors /
      * Managers tabs) - a role outside $actor's own assignable roles is
      * ignored rather than widening what they can see.
      *
@@ -152,7 +152,7 @@ final class UserService
     }
 
     /**
-     * Validate the Employee Management form (module spec s10, s14). Pass
+     * Validate the Editor Management form (module spec s10, s14). Pass
      * $existing when editing, so the account keeps its own email address.
      *
      * A password is validated only when the caller actually supplies one:
@@ -199,7 +199,7 @@ final class UserService
             }
         }
 
-        // Employees earn a share of each project's cost, so it is required for
+        // Editors earn a share of each project's cost, so it is required for
         // them (and only them).
         $isEmployee = $existing !== null
             ? $existing->role === User::ROLE_EMPLOYEE
@@ -327,7 +327,7 @@ final class UserService
 
     /**
      * Permanently delete an account (module spec s12). A Manager who still has
-     * Employees is refused: deleting them would cut those Employees loose from
+     * Editors is refused: deleting them would cut those Editors loose from
      * the person responsible for them, so they are deactivated instead.
      */
     public static function deleteAccount(User $actor, User $target): void
@@ -435,7 +435,7 @@ final class UserService
 
     /**
      * A user updating their own name, email and phone. Their postal address is
-     * maintained by Employee Management, so it is carried through untouched.
+     * maintained by Editor Management, so it is carried through untouched.
      *
      * @param array<string, string> $input
      */

@@ -21,7 +21,7 @@ use App\Services\UserService;
 
 /**
  * The panel each role lands on after signing in (auth spec s4.5). What it
- * summarises depends on which modules the role can reach: an Employee sees
+ * summarises depends on which modules the role can reach: an Editor sees
  * neither the photographer nor the people figures (module spec s2, s6), and
  * only an Admin/Manager - who share full reach over Work, Payment and Task
  * Management - sees the business-wide KPIs and charts.
@@ -42,7 +42,7 @@ final class DashboardController extends Controller
             'title'              => $user->roleLabel() . ' Panel',
             'managesPeople'      => $manages,
             'peopleCounts'       => $manages ? UserService::peopleCounts($user) : [],
-            'employeesUrl'       => $manages ? $base . '/employees' : null,
+            'employeesUrl'       => $manages ? $base . '/editors' : null,
             'photographersUrl'   => PhotographerService::canAccess($user) ? $base . '/photographers' : null,
             'photographerCounts' => PhotographerService::canAccess($user) ? Photographer::statusCounts() : [],
             'activeTokens'       => AuthToken::activeCountForUser($user->id),

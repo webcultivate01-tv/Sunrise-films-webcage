@@ -80,8 +80,8 @@ final class ReportService
         return match ($type) {
             self::TYPE_PHOTOGRAPHERS     => 'Photographer Report',
             self::TYPE_PHOTOGRAPHER_WORK => 'Photographer Work Report',
-            self::TYPE_EMPLOYEES         => 'Employee Report',
-            self::TYPE_EMPLOYEE_WORK     => 'Employee Work Report',
+            self::TYPE_EMPLOYEES         => 'Editor Report',
+            self::TYPE_EMPLOYEE_WORK     => 'Editor Work Report',
             self::TYPE_PROJECTS          => 'Work Report',
             self::TYPE_TASKS             => 'Task Report',
             self::TYPE_PAYMENTS          => 'Payment Report',
@@ -95,7 +95,7 @@ final class ReportService
         return match ($type) {
             self::TYPE_PHOTOGRAPHERS     => 'Every photographer on record, narrowed by status and registration date.',
             self::TYPE_PHOTOGRAPHER_WORK => 'Pick one photographer to get every project they have given us - what each was worth, what has been collected and what is still due.',
-            self::TYPE_EMPLOYEES         => 'Every Manager and Employee account, narrowed by role, status and join date.',
+            self::TYPE_EMPLOYEES         => 'Every Manager and Editor account, narrowed by role, status and join date.',
             self::TYPE_EMPLOYEE_WORK     => 'Pick one employee to get every piece of work given to them, with their earnings and settlement position.',
             self::TYPE_PROJECTS          => 'Every project, narrowed by status, photographer and registration date.',
             self::TYPE_TASKS             => 'Every task across the studio, narrowed by status, priority, employee, project and date range.',
@@ -324,7 +324,7 @@ final class ReportService
             'summary' => [
                 ['label' => 'Accounts', 'value' => (string) count($rows)],
                 ['label' => 'Managers', 'value' => (string) $managers],
-                ['label' => 'Employees', 'value' => (string) (count($rows) - $managers)],
+                ['label' => 'Editors', 'value' => (string) (count($rows) - $managers)],
                 ['label' => 'Active', 'value' => (string) $active],
             ],
             'columns' => [
@@ -358,7 +358,7 @@ final class ReportService
      * Report's answer to give, not a second one printed above this table.
      *
      * As with the photographer report, the employee is a required filter and
-     * is proven to be a real Manager/Employee account before any row is read.
+     * is proven to be a real Manager/Editor account before any row is read.
      *
      * @return array<string, mixed>
      */
@@ -488,7 +488,7 @@ final class ReportService
                 ['label' => 'Title', 'width' => 100, 'align' => 'left'],
                 ['label' => 'Customer', 'width' => 92, 'align' => 'left'],
                 ['label' => 'Photographer', 'width' => 92, 'align' => 'left'],
-                ['label' => 'Employee', 'width' => 85, 'align' => 'left'],
+                ['label' => 'Editor', 'width' => 85, 'align' => 'left'],
                 ['label' => 'Priority', 'width' => 55, 'align' => 'left'],
                 ['label' => 'Status', 'width' => 70, 'align' => 'left'],
                 ['label' => 'Progress', 'width' => 50, 'align' => 'right'],
@@ -609,7 +609,7 @@ final class ReportService
             'summary'  => $summary,
             'columns'  => [
                 ['label' => 'Reference', 'width' => 75, 'align' => 'left'],
-                ['label' => 'Employee', 'width' => 120, 'align' => 'left'],
+                ['label' => 'Editor', 'width' => 120, 'align' => 'left'],
                 ['label' => 'Salary Month', 'width' => 65, 'align' => 'left'],
                 ['label' => 'Amount', 'width' => 75, 'align' => 'right', 'total' => true],
                 ['label' => 'Month Earned', 'width' => 80, 'align' => 'right'],

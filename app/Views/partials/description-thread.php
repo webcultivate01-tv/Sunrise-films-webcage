@@ -4,7 +4,7 @@ use App\Models\TaskDescription;
 
 /**
  * The running description thread on a task, shared by the Admin/Manager task
- * page and the Employee's My Work page.
+ * page and the Editor's My Work page.
  *
  * Every round the photographer sent is listed oldest first, so an employee
  * reads the brief the way it actually arrived: the original, then each

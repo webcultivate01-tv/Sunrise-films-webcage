@@ -52,7 +52,7 @@ $centered = $centered ?? false;
             <div class="relative max-w-md">
                 <h1 class="text-4xl font-semibold leading-tight tracking-tight">Every role, its own door.</h1>
                 <p class="mt-4 text-white/80">
-                    Admin, Manager and Employee each sign in through a separate entry point,
+                    Admin, Manager and Editor each sign in through a separate entry point,
                     and each one reaches only the panel it is entitled to.
                 </p>
             </div>

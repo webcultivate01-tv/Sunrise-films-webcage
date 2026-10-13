@@ -14,7 +14,7 @@ use App\Services\PhotoUploadService;
 use App\Services\UserService;
 
 /**
- * A signed-in user's own account: the one place any role, Employee included,
+ * A signed-in user's own account: the one place any role, Editor included,
  * can change their own password without involving a superior.
  */
 final class ProfileController extends Controller

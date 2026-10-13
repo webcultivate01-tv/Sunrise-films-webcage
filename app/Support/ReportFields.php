@@ -83,7 +83,7 @@ final class ReportFields
             'role' => self::select($key, 'Role', [
                 '' => 'All roles',
                 User::ROLE_MANAGER => 'Manager',
-                User::ROLE_EMPLOYEE => 'Employee',
+                User::ROLE_EMPLOYEE => 'Editor',
             ], $value, $error, $required),
 
             'priority' => self::select($key, 'Priority', self::options(
@@ -115,7 +115,7 @@ final class ReportFields
 
             'employee_id' => self::select(
                 $key,
-                'Employee',
+                'Editor',
                 self::employeeOptions($employees, $required),
                 $value,
                 $error,
@@ -158,11 +158,11 @@ final class ReportFields
     {
         [$path, $placeholder] = match ($type) {
             ReportService::TYPE_PHOTOGRAPHERS => ['/photographers/suggest', 'Name, email or phone'],
-            ReportService::TYPE_EMPLOYEES     => ['/employees/suggest', 'Name, email or phone'],
+            ReportService::TYPE_EMPLOYEES     => ['/editors/suggest', 'Name, email or phone'],
             ReportService::TYPE_PROJECTS      => ['/projects/suggest', 'Customer, folder or photographer'],
             ReportService::TYPE_TASKS         => ['/tasks/suggest', 'Task, customer or employee'],
             ReportService::TYPE_PAYMENTS      => ['/payments/history/suggest', 'Customer, photographer or reference'],
-            ReportService::TYPE_SALARY        => ['/monthly-salary/history/suggest', 'Employee name, email or reference'],
+            ReportService::TYPE_SALARY        => ['/monthly-salary/history/suggest', 'Editor name, email or reference'],
             default                           => ['', 'Search'],
         };
 
@@ -233,7 +233,7 @@ final class ReportFields
      */
     private static function employeeOptions(array $employees, bool $required): array
     {
-        // Employees only - work is never assigned to a Manager or an Admin, and
+        // Editors only - work is never assigned to a Manager or an Admin, and
         // ReportFilters refuses one, so neither may be offered here either.
         $options = ['' => $required ? 'Choose an employee...' : 'All employees'];
 

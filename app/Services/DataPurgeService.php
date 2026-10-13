@@ -43,7 +43,7 @@ final class DataPurgeService
             'salary' => [
                 'label'       => 'Monthly Salary',
                 'description' => 'All salary settlements and salary bills.',
-                'includes'    => 'Salary settlements only. Employees and tasks are kept.',
+                'includes'    => 'Salary settlements only. Editors and tasks are kept.',
                 'tables'      => ['salary_settlements'],
             ],
             'tasks' => [
@@ -65,9 +65,9 @@ final class DataPurgeService
                 'tables'      => [...$projects, 'photographers'],
             ],
             'employees' => [
-                'label'       => 'Employees & Managers',
+                'label'       => 'Editors & Managers',
                 'description' => 'All employee and manager accounts (Admin accounts are kept).',
-                'includes'    => 'Employee and manager accounts, their profile photos, salary settlements and tasks.',
+                'includes'    => 'Editor and manager accounts, their profile photos, salary settlements and tasks.',
                 'tables'      => ['salary_settlements', ...$tasks, self::NON_ADMIN_USERS],
             ],
             self::ALL => [
@@ -101,6 +101,88 @@ final class DataPurgeService
         }
 
         return $counts;
+    }
+
+    /**
+     * Rows each module's deletion would remove within a date range, keyed by table.
+     *
+     * @return array<string, int>
+     */
+    public static function countsByDateRange(string $module, string $from, string $to): array
+    {
+        if (!self::exists($module)) {
+            return [];
+        }
+
+        $counts = [];
+
+        foreach (self::modules()[$module]['tables'] as $table) {
+            $where = $table === self::NON_ADMIN_USERS
+                ? "role <> 'admin' AND DATE(created_at) BETWEEN :from AND :to"
+                : 'DATE(created_at) BETWEEN :from AND :to';
+
+            $row = Database::selectOne(
+                "SELECT COUNT(*) AS total FROM {$table} WHERE {$where}",
+                [':from' => $from, ':to' => $to],
+            );
+
+            $counts[$table] = (int) ($row['total'] ?? 0);
+        }
+
+        return $counts;
+    }
+
+    /**
+     * Delete the module's data within a date range. Returns rows removed.
+     */
+    public static function purgeByDateRange(string $module, string $from, string $to): int
+    {
+        $definition = self::modules()[$module] ?? throw new \InvalidArgumentException('Unknown module.');
+        $tables     = $definition['tables'];
+        $photos     = in_array(self::NON_ADMIN_USERS, $tables, true) ? self::userPhotosByDateRange($from, $to) : [];
+
+        $pdo     = Database::connection();
+        $deleted = 0;
+
+        $pdo->beginTransaction();
+
+        try {
+            foreach ($tables as $table) {
+                $deleted += $table === self::NON_ADMIN_USERS
+                    ? Database::statement(
+                        "DELETE FROM users WHERE role <> 'admin' AND DATE(created_at) BETWEEN :from AND :to",
+                        [':from' => $from, ':to' => $to],
+                    )
+                    : Database::statement(
+                        "DELETE FROM {$table} WHERE DATE(created_at) BETWEEN :from AND :to",
+                        [':from' => $from, ':to' => $to],
+                    );
+            }
+
+            $pdo->commit();
+        } catch (\Throwable $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
+
+        foreach ($photos as $photo) {
+            PhotoUploadService::delete($photo);
+        }
+
+        return $deleted;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function userPhotosByDateRange(string $from, string $to): array
+    {
+        $rows = Database::select(
+            "SELECT photo FROM users WHERE role <> 'admin' AND photo IS NOT NULL AND photo <> '' AND DATE(created_at) BETWEEN :from AND :to",
+            [':from' => $from, ':to' => $to],
+        );
+
+        return array_map(static fn (array $row): string => (string) $row['photo'], $rows);
     }
 
     /**

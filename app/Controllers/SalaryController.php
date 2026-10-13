@@ -21,7 +21,7 @@ use App\Services\SalaryService;
 final class SalaryController extends Controller
 {
     /**
-     * GET /{panel}/monthly-salary - the Employee Salary List (spec s3).
+     * GET /{panel}/monthly-salary - the Editor Salary List (spec s3).
      *
      * @param array<string, string> $params
      */
@@ -43,7 +43,7 @@ final class SalaryController extends Controller
 
     /**
      * GET /{panel}/monthly-salary/suggest - live suggestions for the search
-     * box on the Employee Salary List.
+     * box on the Editor Salary List.
      *
      * @param array<string, string> $params
      */
@@ -92,7 +92,7 @@ final class SalaryController extends Controller
     }
 
     /**
-     * GET /{panel}/monthly-salary/{id} - View Employee Salary (spec s4, s5),
+     * GET /{panel}/monthly-salary/{id} - View Editor Salary (spec s4, s5),
      * with an optional ?month= to drill into one month's entries.
      *
      * @param array<string, string> $params

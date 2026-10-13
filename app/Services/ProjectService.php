@@ -19,7 +19,7 @@ use App\Support\SimplePdf;
  * list, the same shape as Photographer Management: both may register, view, edit
  * and change the status of any project; only an Admin may delete one outright.
  *
- * Employees have no access to this module.
+ * Editors have no access to this module.
  */
 final class ProjectService
 {

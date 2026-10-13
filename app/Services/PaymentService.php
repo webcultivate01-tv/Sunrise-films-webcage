@@ -7,9 +7,12 @@ namespace App\Services;
 use App\Core\Exceptions\HttpException;
 use App\Core\Validator;
 use App\Models\Payment;
+use App\Models\PaymentBill;
+use App\Models\Photographer;
 use App\Models\Project;
 use App\Models\Setting;
 use App\Models\User;
+use App\Support\PngLogo;
 use App\Support\SimplePdf;
 
 /**
@@ -159,6 +162,22 @@ final class PaymentService
         }
 
         return $index;
+    }
+
+    /**
+     * All projects with a pending (non-paid) payment status, unfiltered -
+     * used for the Call Pending tab on the Payment Dashboard.
+     *
+     * @return list<array{project: Project, collected: float, outstanding: float, status: string, paymentsCount: int, lastPaymentDate: ?string}>
+     */
+    public static function pendingProjects(User $actor): array
+    {
+        self::assertAccess($actor);
+
+        return array_values(array_filter(
+            self::rows(),
+            static fn (array $row): bool => $row['status'] !== self::STATUS_PAID,
+        ));
     }
 
     /**
@@ -393,7 +412,67 @@ final class PaymentService
             receivedBy:    $actor->id,
         );
 
-        return Payment::findById($id) ?? throw new \RuntimeException('The payment could not be recorded.');
+        $payment = Payment::findById($id) ?? throw new \RuntimeException('The payment could not be recorded.');
+
+        // The bill is issued the instant the payment exists, from the figures
+        // as they stand right now, and is never recomputed afterwards.
+        self::issueBill($payment, Payment::totalForProject($payment->projectId));
+
+        return $payment;
+    }
+
+    /**
+     * The bill issued for $payment. Every payment gets one when it is
+     * recorded (and the 24_payment_bills migration backfilled the older
+     * ones); the fallback here covers a payment that somehow has none by
+     * issuing it once from what is on file, so the figures are then frozen
+     * like any other bill.
+     */
+    public static function billFor(Payment $payment): PaymentBill
+    {
+        $bill = PaymentBill::findByPayment($payment->id);
+
+        if ($bill !== null) {
+            return $bill;
+        }
+
+        $collected = 0.0;
+
+        foreach (Payment::timelineForProject($payment->projectId) as $entry) {
+            $collected += $entry->amount;
+
+            if ($entry->id === $payment->id) {
+                break;
+            }
+        }
+
+        self::issueBill($payment, $collected);
+
+        return PaymentBill::findByPayment($payment->id)
+            ?? throw new \RuntimeException('The bill could not be generated.');
+    }
+
+    private static function issueBill(Payment $payment, float $collectedToDate): void
+    {
+        $project      = Project::findById($payment->projectId);
+        $photographer = $payment->photographerId !== null ? Photographer::findById($payment->photographerId) : null;
+
+        PaymentBill::issue(
+            paymentId:         $payment->id,
+            reference:         self::billReference($payment),
+            billDate:          $payment->paymentDate,
+            photographerName:  $photographer?->name ?? $payment->photographerName,
+            photographerPhone: $photographer?->phone,
+            photographerEmail: $photographer?->email,
+            customerName:      $payment->customerName,
+            paymentType:       $payment->paymentType,
+            paymentMethod:     $payment->paymentMethod,
+            amount:            $payment->amount,
+            projectTotal:      $project?->totalPayment ?? $payment->projectTotalPayment ?? 0.0,
+            collectedToDate:   $collectedToDate,
+            notes:             $payment->notes,
+            company:           Setting::current(),
+        );
     }
 
     /**
@@ -414,131 +493,158 @@ final class PaymentService
      * WhatsApp's click-to-chat links cannot carry a file, so the bill itself
      * is downloaded alongside this and attached by hand - the message says so
      * rather than leaving the photographer waiting for an attachment that was
-     * never sent.
+     * never sent. Built from the frozen bill, so it always matches it.
      */
-    public static function billWhatsAppMessage(Payment $payment, float $total, float $collected): string
+    public static function billWhatsAppMessage(PaymentBill $bill): string
     {
-        $company     = Setting::current();
-        $outstanding = max(0.0, $total - $collected);
-
         return implode("\n", [
-            'Hello ' . ($payment->photographerName ?? 'there') . ',',
+            'Hello ' . ($bill->photographerName ?? 'there') . ',',
             '',
-            'Here is your payment receipt ' . self::billReference($payment) . ' from ' . $company->companyName . '.',
+            'Here is your payment receipt ' . $bill->reference . ' from ' . $bill->companyName . '.',
             '',
-            'Customer: ' . ($payment->customerName ?? '-'),
-            'Payment type: ' . payment_type_label($payment->paymentType),
-            'Payment method: ' . payment_method_label($payment->paymentMethod),
-            'Amount received: ' . money($payment->amount),
-            'Payment date: ' . date('j M Y', strtotime($payment->paymentDate)),
-            'Project total: ' . money($total),
-            'Outstanding balance: ' . money($outstanding),
+            'Customer: ' . ($bill->customerName ?? '-'),
+            'Payment type: ' . payment_type_label($bill->paymentType),
+            'Payment method: ' . payment_method_label($bill->paymentMethod),
+            'Amount received: ' . money($bill->amount),
+            'Payment date: ' . date('j M Y', strtotime($bill->billDate)),
+            'Project total: ' . money($bill->projectTotal),
+            'Outstanding balance: ' . money($bill->outstanding),
             '',
             'The receipt PDF is attached. Thank you!',
         ]);
     }
 
     /**
-     * Build the Bill/Receipt PDF for one payment - the same document whether
-     * it is downloaded straight from Work Management (the advance collected
-     * when a project is created) or later from Payment Management.
+     * Build the Bill/Receipt PDF from the frozen bill - laid out like the
+     * on-screen receipt (logo and company block, receipt no/date strip,
+     * photographer and customer, payment rows, outstanding balance and the
+     * signatory line), and identical whether it is downloaded straight after
+     * a work is added or later from Payment Management.
      */
-    public static function generateBillPdf(Payment $payment): string
+    public static function generateBillPdf(PaymentBill $bill): string
     {
-        $project   = Project::findById($payment->projectId);
-        $company   = Setting::current();
-        $collected = Payment::totalForProject($payment->projectId);
-        $total     = $project?->totalPayment ?? $payment->projectTotalPayment ?? 0.0;
+        $pdf   = new SimplePdf();
+        $ink   = [0.067, 0.090, 0.208];
+        $muted = [0.39, 0.45, 0.55];
+        $faint = [0.58, 0.64, 0.72];
+        $rule  = [0.89, 0.91, 0.94];
+        $tint  = [0.94, 0.95, 1.0];
 
-        $outstanding = max(0.0, $total - $collected);
+        $cardL = 40.0;
+        $cardR = $pdf->pageWidth() - 40.0;
+        $cardT = $pdf->pageHeight() - 40.0;
+        $left  = $cardL + 28.0;
+        $right = $cardR - 28.0;
+        $mid   = $cardL + ($cardR - $cardL) / 2 + 10.0;
 
-        $pdf    = new SimplePdf();
-        $left   = 50.0;
-        $right  = $pdf->pageWidth() - 50.0;
-        $white  = [1.0, 1.0, 1.0];
-        $tint   = [0.82, 0.83, 0.90];
-        $bannerH = 96.0;
+        // ============ Header: logo left, company block right ============
+        $logo = PngLogo::grayscale(BASE_PATH . '/public/assets/img/sunrise-mark.png');
 
-        // ============ Header banner: dark letterhead, company block right-aligned ============
-        $pdf->rect(0, $pdf->pageHeight() - $bannerH, $pdf->pageWidth(), $bannerH, [0.067, 0.090, 0.208]);
-
-        $y = $pdf->pageHeight() - 32.0;
-        $pdf->textRight($right, $y, $company->companyName, 16, true, $white);
-        $y -= 14;
-
-        foreach (array_filter([$company->companyAddress, $company->companyPhone, $company->companyWebsite, $company->companyEmail]) as $line) {
-            $pdf->textRight($right, $y, $line, 9, false, $tint);
-            $y -= 11;
+        if ($logo !== null) {
+            $pdf->grayImage($logo['data'], $logo['width'], $logo['height'], $left, $cardT - 28.0 - 42.0, 42.0, 42.0);
         }
 
-        $y = $pdf->pageHeight() - $bannerH - 30.0;
+        $y = $cardT - 40.0;
+        $pdf->textRight($right, $y, $bill->companyName, 16, true, $ink);
 
-        $reference = self::billReference($payment);
-
-        $pdf->text($left, $y, 'PAYMENT RECEIPT', 14, true);
-        $pdf->text($right - 160, $y, 'Reference: ' . $reference, 10, true);
-        $y -= 16;
-        $pdf->text($right - 160, $y, 'Date: ' . date('j M Y', strtotime($payment->paymentDate)), 10);
-        $y -= 30;
-
-        $pdf->text($left, $y, 'Photographer', 11, true);
-        $y -= 17;
-
-        $photographerFields = [
-            'Name'     => $payment->photographerName ?? 'Unknown photographer',
-            'Customer' => $payment->customerName ?? 'Unknown customer',
-        ];
-
-        foreach ($photographerFields as $label => $value) {
-            $pdf->text($left, $y, $label . ':', 10, true);
-            $pdf->text($left + 120, $y, $value, 10);
-            $y -= 16;
+        foreach (array_filter([$bill->companyPhone, $bill->companyEmail, $bill->companyWebsite, $bill->companyAddress]) as $line) {
+            $y -= 12;
+            $pdf->textRight($right, $y, $line, 8.5, false, $muted);
         }
 
-        $y -= 8;
-        $pdf->line($left, $y, $right, $y);
-        $y -= 26;
+        $y = min($y, $cardT - 28.0 - 42.0) - 18.0;
+        $pdf->line($cardL, $y, $cardR, $y, 0.75, $rule);
 
-        $pdf->text($left, $y, 'Payment Details', 11, true);
-        $y -= 18;
+        // ============ Reference strip ============
+        $stripH = 36.0;
+        $pdf->rect($cardL, $y - $stripH, $cardR - $cardL, $stripH, $tint);
+        $textY = $y - 22.0;
+        $pdf->text($left, $textY, 'Receipt No:', 10, true, $ink);
+        $pdf->text($left + $pdf->textWidth('Receipt No: ', 10, true), $textY, $bill->reference, 10, false, $muted);
 
+        $date = date('j M Y', strtotime($bill->billDate));
+        $pdf->textRight($right, $textY, $date, 10, false, $muted);
+        $pdf->textRight($right - $pdf->textWidth($date . ' ', 10), $textY, 'Receipt Date:', 10, true, $ink);
+
+        $y -= $stripH + 28.0;
+
+        // ============ Photographer / Customer ============
+        $pdf->text($left, $y, 'PHOTOGRAPHER', 8, true, $faint);
+        $pdf->text($mid, $y, 'CUSTOMER', 8, true, $faint);
+
+        $colTop = $y - 16.0;
+        $pdf->text($left, $colTop, $bill->photographerName ?? 'Unknown photographer', 11, true, $ink);
+        $pdf->text($mid, $colTop, $bill->customerName ?? 'Unknown customer', 11, true, $ink);
+
+        $detailY = $colTop;
+
+        foreach (array_filter([$bill->photographerPhone, $bill->photographerEmail]) as $line) {
+            $detailY -= 14.0;
+            $pdf->text($left, $detailY, $line, 9.5, false, $muted);
+        }
+
+        $y = $detailY - 22.0;
+        $pdf->line($cardL, $y, $cardR, $y, 0.75, $rule);
+        $y -= 14.0;
+
+        // ============ Payment details ============
         $rows = [
-            ['Payment method', payment_method_label($payment->paymentMethod)],
-            ['Amount received', self::pdfMoney($payment->amount)],
-            ['Project total value', self::pdfMoney($total)],
-            ['Total collected to date', self::pdfMoney($collected)],
+            ['Payment type', payment_type_label($bill->paymentType), null, false],
+            ['Payment method', payment_method_label($bill->paymentMethod), null, false],
+            ['Amount received', null, $bill->amount, true],
+            ['Project total value', null, $bill->projectTotal, false],
+            ['Total collected to date', null, $bill->collectedToDate, false],
         ];
 
-        foreach ($rows as [$label, $value]) {
-            $pdf->text($left, $y, $label, 10);
-            $pdf->text($left + 260, $y, $value, 10, true);
-            $y -= 18;
+        foreach ($rows as [$label, $text, $money, $strong]) {
+            $y -= 22.0;
+            $pdf->text($left, $y, $label, 10, false, $muted);
+
+            if ($money !== null) {
+                $pdf->rupeeRight($right, $y, number_format($money, 2), $strong ? 12 : 10, true, $ink);
+            } else {
+                $pdf->textRight($right, $y, (string) $text, 10, true, $ink);
+            }
+
+            $pdf->line($left, $y - 8.0, $right, $y - 8.0, 0.5, $rule);
         }
 
-        $y -= 4;
-        $pdf->text($left, $y, 'Outstanding balance', 11, true);
-        $pdf->text($left + 260, $y, self::pdfMoney($outstanding), 11, true, $outstanding > 0.0 ? [0.75, 0.1, 0.1] : [0.02, 0.55, 0.35]);
-        $y -= 22;
+        // ============ Outstanding balance ============
+        $y -= 22.0;
+        $boxH = 34.0;
+        $pdf->roundedRect($left, $y - $boxH + 6.0, $right - $left, $boxH, 6, $tint);
 
-        if ($payment->notes !== null && $payment->notes !== '') {
-            $pdf->text($left, $y, 'Notes: ' . $payment->notes, 9);
-            $y -= 18;
+        $balanceColor = $bill->outstanding > 0.0 ? [0.86, 0.15, 0.15] : [0.02, 0.59, 0.41];
+        $pdf->text($left + 14.0, $y - 14.0, 'Outstanding Balance', 11, true, $ink);
+        $pdf->rupeeRight($right - 14.0, $y - 14.0, number_format($bill->outstanding, 2), 12, true, $balanceColor);
+
+        $y -= $boxH + 10.0;
+
+        if ($bill->notes !== null && $bill->notes !== '') {
+            $y -= 6.0;
+            $pdf->text($left, $y, 'NOTES', 8, true, $faint);
+
+            foreach ($pdf->wrap($bill->notes, $right - $left, 9.5) as $line) {
+                $y -= 13.0;
+                $pdf->text($left, $y, $line, 9.5, false, $ink);
+            }
+
+            $y -= 8.0;
         }
 
-        $y -= 12;
-        $pdf->line($left, $y, $right, $y);
-        $y -= 20;
-        $pdf->text($left, $y, 'This is a system-generated receipt and does not require a signature.', 8);
+        // ============ Footer: signatory ============
+        $y -= 12.0;
+        $pdf->line($cardL, $y, $cardR, $y, 0.75, $rule);
+
+        $sigL = $right - 140.0;
+        $pdf->textCentered($sigL + 70.0, $y - 30.0, 'For ' . $bill->companyName, 10, false, $muted);
+        $pdf->line($sigL, $y - 78.0, $right, $y - 78.0, 0.75, [0.72, 0.77, 0.84]);
+        $pdf->textCentered($sigL + 70.0, $y - 90.0, 'Authorised Signatory', 8.5, false, $muted);
+
+        // The card outline goes on last so it is sized to what was written.
+        $cardB = $y - 110.0;
+        $pdf->roundedRect($cardL, $cardB, $cardR - $cardL, $cardT - $cardB, 14, null, [0.82, 0.84, 0.88], 1.5);
 
         return $pdf->output();
-    }
-
-    /**
-     * Money formatted for the PDF: the base-14 fonts used there do not carry
-     * a rupee-sign glyph, so an "INR" prefix is used instead of money().
-     */
-    private static function pdfMoney(float $amount): string
-    {
-        return 'INR ' . number_format($amount, 2);
     }
 }

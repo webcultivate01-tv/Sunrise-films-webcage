@@ -68,7 +68,7 @@ $field      = 'rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm
                 <tr>
                     <th scope="col" class="w-12 px-5 py-3 font-medium">No</th>
                     <th scope="col" class="px-5 py-3 font-medium">Date</th>
-                    <th scope="col" class="px-5 py-3 font-medium">Employee</th>
+                    <th scope="col" class="px-5 py-3 font-medium">Editor</th>
                     <th scope="col" class="px-5 py-3 font-medium">Type</th>
                     <th scope="col" class="px-5 py-3 font-medium">Reference</th>
                     <th scope="col" class="px-5 py-3 font-medium">Detail</th>

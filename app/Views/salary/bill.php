@@ -5,7 +5,7 @@ use App\Models\Setting;
 
 /**
  * View Bill (spec s9): a read-only rendering of one settlement's frozen
- * figures, shared by the Admin/Manager and Employee sides - only $backUrl and
+ * figures, shared by the Admin/Manager and Editor sides - only $backUrl and
  * $downloadUrl differ between them.
  *
  * @var SalarySettlement $settlement
@@ -47,16 +47,16 @@ $company = Setting::current();
         </div>
     </div>
 
-    <!-- ============ Employee ============ -->
+    <!-- ============ Editor ============ -->
     <div class="grid gap-6 border-b border-line px-8 py-6 sm:grid-cols-2">
         <div>
-            <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Employee</p>
+            <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Editor</p>
             <p class="mt-2 text-sm font-semibold text-ink"><?= e($settlement->employeeNameSnapshot) ?></p>
             <p class="mt-1 text-sm text-slate-600"><?= e($settlement->employeePhoneSnapshot ?? 'Not recorded') ?></p>
             <p class="text-sm text-slate-600"><?= e($settlement->employeeEmailSnapshot) ?></p>
         </div>
         <div>
-            <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Employee ID</p>
+            <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Editor ID</p>
             <p class="mt-2 text-sm font-semibold text-ink">EMP-<?= e(str_pad((string) $settlement->employeeId, 4, '0', STR_PAD_LEFT)) ?></p>
         </div>
     </div>

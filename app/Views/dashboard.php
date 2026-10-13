@@ -9,7 +9,7 @@ use App\Services\PaymentService;
 /**
  * The panel each role lands on (auth spec s4.5). An Admin/Manager - who share
  * full reach over Work, Payment and Task Management - gets the business KPIs
- * and charts below; an Employee gets their own task/salary snapshot instead.
+ * and charts below; an Editor gets their own task/salary snapshot instead.
  *
  * @var User                    $authUser
  * @var bool                    $managesPeople
@@ -27,9 +27,9 @@ use App\Services\PaymentService;
  * @var string|null             $projectsUrl
  * @var string|null             $paymentsUrl
  * @var string|null             $tasksUrl
- * @var array<string, int>                                                                          $myTaskStatusCounts Employee only: their own tasks by status
- * @var array{earned: float, paid: float, outstanding: float, status: string}                        $mySalaryTotals     Employee only
- * @var list<array{month: string, earned: float}>                                                     $mySalaryTrend      Employee only, oldest first, zero-filled
+ * @var array<string, int>                                                                          $myTaskStatusCounts Editor only: their own tasks by status
+ * @var array{earned: float, paid: float, outstanding: float, status: string}                        $mySalaryTotals     Editor only
+ * @var list<array{month: string, earned: float}>                                                     $mySalaryTrend      Editor only, oldest first, zero-filled
  * @var string|null             $myWorkUrl
  * @var string|null             $mySalaryUrl
  */
@@ -506,7 +506,7 @@ $base = (string) config('roles.' . $authUser->role . '.login');
 
     <?php if ($employeesUrl !== null): ?>
         <section class="rounded-xl border border-line bg-white p-6">
-            <h2 class="text-base font-semibold text-ink">Employee Management</h2>
+            <h2 class="text-base font-semibold text-ink">Editor Management</h2>
             <p class="mt-1.5 text-sm text-slate-500">
                 <?= $authUser->role === User::ROLE_ADMIN
                     ? 'Create manager and employee accounts, edit their details and control who can sign in.'
@@ -519,7 +519,7 @@ $base = (string) config('roles.' . $authUser->role . '.login');
                 </a>
                 <a href="<?= e($employeesUrl) ?>/create"
                    class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
-                    Add <?= $authUser->role === User::ROLE_ADMIN ? 'user' : 'employee' ?>
+                    Add <?= $authUser->role === User::ROLE_ADMIN ? 'user' : 'editor' ?>
                 </a>
             </div>
         </section>

@@ -3,10 +3,10 @@
 declare(strict_types=1);
 
 /**
- * End-to-end check of the Photographer & Employee Management acceptance criteria
+ * End-to-end check of the Photographer & Editor Management acceptance criteria
  * (module spec s17), run against the real database.
  *
- * It creates a throwaway Manager, Employee and Photographer, exercises the role
+ * It creates a throwaway Manager, Editor and Photographer, exercises the role
  * rules, the scope rules, validation, search and the welcome email, then
  * deletes everything it created.
  *
@@ -86,12 +86,12 @@ try {
     }
 
     // =======================================================================
-    echo PHP_EOL . "Employee Management - access (s6, s12, s17)" . PHP_EOL;
+    echo PHP_EOL . "Editor Management - access (s6, s12, s17)" . PHP_EOL;
 
     check('admin can access employee management', UserService::managesPeople($admin));
 
     // -----------------------------------------------------------------------
-    echo PHP_EOL . "Employee Management - role assignment (s8, s9, s17)" . PHP_EOL;
+    echo PHP_EOL . "Editor Management - role assignment (s8, s9, s17)" . PHP_EOL;
 
     check('admin is offered both roles',
         UserService::assignableRoles($admin) === [User::ROLE_MANAGER, User::ROLE_EMPLOYEE]);
@@ -109,7 +109,7 @@ try {
     check('admin can create managers', $manager->role === User::ROLE_MANAGER);
 
     $adminEmployee = UserService::createAccount($admin, [
-        'name'     => 'Module Admin-made Employee',
+        'name'     => 'Module Admin-made Editor',
         'email'    => $adminEmpEmail,
         'phone'    => '+91 98765 11111',
         'address'  => '9 MG Road, Bengaluru 560001',
@@ -124,7 +124,7 @@ try {
         UserService::assignableRoles($manager) === [User::ROLE_EMPLOYEE]);
 
     $employee = UserService::createAccount($manager, [
-        'name'     => 'Module Employee',
+        'name'     => 'Module Editor',
         'email'    => $employeeEmail,
         'phone'    => '+91 98765 43211',
         'address'  => '44 Church Street, Bengaluru 560001',
@@ -157,18 +157,18 @@ try {
     ])));
 
     // -----------------------------------------------------------------------
-    echo PHP_EOL . "Employee Management - captured fields (s10, s17)" . PHP_EOL;
+    echo PHP_EOL . "Editor Management - captured fields (s10, s17)" . PHP_EOL;
 
     $stored = User::findById($employee->id);
 
-    check('employee name is stored', $stored?->name === 'Module Employee');
+    check('employee name is stored', $stored?->name === 'Module Editor');
     check('employee email is stored', $stored?->email === mb_strtolower($employeeEmail));
     check('employee mobile number is stored', $stored?->phone === '+91 98765 43211');
     check('employee address is stored', $stored?->address === '44 Church Street, Bengaluru 560001');
     check('employee role is stored', $stored?->role === User::ROLE_EMPLOYEE);
 
     // -----------------------------------------------------------------------
-    echo PHP_EOL . "Employee Management - validation (s14)" . PHP_EOL;
+    echo PHP_EOL . "Editor Management - validation (s14)" . PHP_EOL;
 
     $blank = UserService::validateAccount($admin, [
         'name' => '', 'email' => '', 'phone' => '', 'address' => '', 'role' => '',
@@ -193,15 +193,15 @@ try {
     ])->errors()));
 
     check('an edit keeps its own email address', !array_key_exists('email', UserService::validateAccount($admin, [
-        'name' => 'Module Employee', 'email' => $employeeEmail, 'phone' => '9876543210',
+        'name' => 'Module Editor', 'email' => $employeeEmail, 'phone' => '9876543210',
         'address' => 'Somewhere',
     ], $employee)->errors()));
 
     // -----------------------------------------------------------------------
-    echo PHP_EOL . "Employee Management - scope (s15, updated - Manager reach widened to match Admin)" . PHP_EOL;
+    echo PHP_EOL . "Editor Management - scope (s15, updated - Manager reach widened to match Admin)" . PHP_EOL;
 
     $stray = UserService::createAccount($admin, [
-        'name'     => 'Module Stray Employee',
+        'name'     => 'Module Stray Editor',
         'email'    => $strayEmail,
         'phone'    => '+91 98765 43214',
         'address'  => '7 Brigade Road, Bengaluru 560001',
@@ -233,7 +233,7 @@ try {
         refused(static fn () => UserService::findManagedOrFail($employee, $stray->id)));
 
     // -----------------------------------------------------------------------
-    echo PHP_EOL . "Employee Management - search (s16)" . PHP_EOL;
+    echo PHP_EOL . "Editor Management - search (s16)" . PHP_EOL;
 
     $found = UserService::people($admin, 'Module Stray');
     check('search finds an account by name', count($found) === 1 && $found[0]->id === $stray->id);
@@ -246,16 +246,16 @@ try {
         UserService::people($admin, 'no-such-person-' . $suffix) === []);
 
     // -----------------------------------------------------------------------
-    echo PHP_EOL . "Employee Management - edit, status and delete (s12)" . PHP_EOL;
+    echo PHP_EOL . "Editor Management - edit, status and delete (s12)" . PHP_EOL;
 
     $edited = UserService::updateAccount($manager, $employee, [
-        'name'    => 'Module Employee Renamed',
+        'name'    => 'Module Editor Renamed',
         'email'   => $employeeEmail,
         'phone'   => '+91 90000 00000',
         'address' => '101 New Address, Bengaluru 560002',
     ]);
 
-    check('manager can edit their employee', $edited->name === 'Module Employee Renamed'
+    check('manager can edit their employee', $edited->name === 'Module Editor Renamed'
         && $edited->phone === '+91 90000 00000'
         && $edited->address === '101 New Address, Bengaluru 560002');
 
@@ -296,7 +296,7 @@ try {
     check('the welcome email carries the temporary password',
         $newFiles !== [] && str_contains((string) file_get_contents($newFiles[0]), 'TempPass123'));
     check('the welcome email names the sign-in page',
-        $newFiles !== [] && str_contains((string) file_get_contents($newFiles[0]), '/employee'));
+        $newFiles !== [] && str_contains((string) file_get_contents($newFiles[0]), '/editor'));
 
     foreach ($newFiles as $file) {
         @unlink($file);

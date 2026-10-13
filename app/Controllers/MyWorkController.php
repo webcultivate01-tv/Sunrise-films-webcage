@@ -13,16 +13,16 @@ use App\Models\User;
 use App\Services\TaskService;
 
 /**
- * My Work - the Employee side of Task Management (task spec s10, s11, s13).
+ * My Work - the Editor side of Task Management (task spec s10, s11, s13).
  *
- * Every method here proves the task belongs to the signed-in Employee before
+ * Every method here proves the task belongs to the signed-in Editor before
  * doing anything with it (TaskService::findForEmployee / assertOwnedByEmployee),
  * so a tampered URL can never reach somebody else's task.
  */
 final class MyWorkController extends Controller
 {
     /**
-     * GET /employee/my-work - active/completed/exited views, search and
+     * GET /editor/my-work - active/completed/exited views, search and
      * filters (task spec s11, s13).
      *
      * @param array<string, string> $params
@@ -53,7 +53,7 @@ final class MyWorkController extends Controller
     }
 
     /**
-     * GET /employee/my-work/suggest - live suggestions for the search box.
+     * GET /editor/my-work/suggest - live suggestions for the search box.
      *
      * @param array<string, string> $params
      */
@@ -77,7 +77,7 @@ final class MyWorkController extends Controller
     }
 
     /**
-     * GET /employee/my-work/{id}
+     * GET /editor/my-work/{id}
      *
      * @param array<string, string> $params
      */
@@ -95,7 +95,7 @@ final class MyWorkController extends Controller
     }
 
     /**
-     * POST /employee/my-work/{id}/accept - task spec s5.
+     * POST /editor/my-work/{id}/accept - task spec s5.
      *
      * @param array<string, string> $params
      */
@@ -110,7 +110,7 @@ final class MyWorkController extends Controller
     }
 
     /**
-     * POST /employee/my-work/{id}/progress - task spec s6.
+     * POST /editor/my-work/{id}/progress - task spec s6.
      *
      * @param array<string, string> $params
      */
@@ -130,7 +130,7 @@ final class MyWorkController extends Controller
     }
 
     /**
-     * POST /employee/my-work/{id}/complete - task spec s7.
+     * POST /editor/my-work/{id}/complete - task spec s7.
      *
      * @param array<string, string> $params
      */
@@ -149,7 +149,7 @@ final class MyWorkController extends Controller
     }
 
     /**
-     * POST /employee/my-work/{id}/exit - task spec s8.
+     * POST /editor/my-work/{id}/exit - task spec s8.
      *
      * @param array<string, string> $params
      */
