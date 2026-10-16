@@ -121,6 +121,14 @@ final class ProjectService
         $validator->require('customer_name', $customerName, 'Please enter the customer name.');
         $validator->maxLength('customer_name', $customerName, 150, 'Customer name must be 150 characters or fewer.');
 
+        $projectType = trim($input['project_type'] ?? '');
+
+        $validator->require('project_type', $projectType, 'Please select the project type.');
+
+        if ($projectType !== '') {
+            $validator->in('project_type', $projectType, Project::projectTypes(), 'That project type is not recognised.');
+        }
+
         $validator->require('description', $description, 'Please enter a project description.');
 
         $validator->require('folder_name', $folderName, 'Please enter the receivable folder name.');
@@ -243,6 +251,7 @@ final class ProjectService
             deadline:       trim($input['deadline']),
             totalPayment:   (float) $input['total_payment'],
             createdBy:      $actor->id,
+            projectType:    trim($input['project_type']),
         );
 
         return Project::findById($id)
@@ -264,6 +273,7 @@ final class ProjectService
             trim($input['folder_name']),
             trim($input['deadline']),
             (float) $input['total_payment'],
+            trim($input['project_type']),
         );
 
         return Project::findById($project->id)

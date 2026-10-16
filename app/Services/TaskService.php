@@ -143,7 +143,6 @@ final class TaskService
 
         $projectId   = trim($input['project_id'] ?? '');
         $employeeId  = trim($input['employee_id'] ?? '');
-        $projectType = trim($input['project_type'] ?? '');
         $description = trim($input['description'] ?? '');
         $startDate   = trim($input['start_date'] ?? '');
         $endDate     = trim($input['end_date'] ?? '');
@@ -170,12 +169,6 @@ final class TaskService
             } elseif (self::employeePercentage((int) $employeeId) === null) {
                 $validator->add('employee_id', 'This employee has no percentage set. Edit the employee and add one first.');
             }
-        }
-
-        $validator->require('project_type', $projectType, 'Please select a project type.');
-
-        if ($projectType !== '' && !in_array($projectType, Task::projectTypes(), true)) {
-            $validator->add('project_type', 'That project type is not recognised.');
         }
 
         $validator->require('description', $description, 'Please enter a task description.');
@@ -242,12 +235,16 @@ final class TaskService
         $percentage  = self::employeePercentage((int) $input['employee_id'])
             ?? throw HttpException::forbidden('This employee has no percentage set.');
 
-        $projectType = trim($input['project_type']);
+        $project = Project::findById((int) $input['project_id'])
+            ?? throw new \RuntimeException('The project could not be found.');
 
         $id = Task::create(
-            projectId:   (int) $input['project_id'],
+            projectId:   $project->id,
             employeeId:  (int) $input['employee_id'],
-            title:       $projectType,
+            // The task is named after the project type chosen when the project
+            // was registered; projects that predate the field fall back to
+            // the customer name.
+            title:       $project->projectType ?? $project->customerName,
             description: trim($input['description']),
             startDate:   trim($input['start_date']),
             endDate:     trim($input['end_date']),
@@ -255,7 +252,6 @@ final class TaskService
             amount:      self::amountFor($projectCost, $percentage),
             createdBy:   $actor->id,
             projectCost: $projectCost,
-            projectType: $projectType,
         );
 
         // Row one of the task's own thread, so every later round the

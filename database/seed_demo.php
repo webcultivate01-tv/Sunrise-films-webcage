@@ -88,7 +88,7 @@ function findOrCreatePhotographer(
 
         return Photographer::findById((int) $row['id']);
     }
-
+  
     $id = Photographer::create($name, $email, $phone, $address, $createdBy);
     echo "  - Photographer: {$name} created." . PHP_EOL;
 

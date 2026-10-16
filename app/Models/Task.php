@@ -44,30 +44,6 @@ final class Task
         return [self::PRIORITY_HIGH, self::PRIORITY_MEDIUM, self::PRIORITY_LOW];
     }
 
-    /** @return list<string> */
-    public static function projectTypes(): array
-    {
-        return [
-            'Reels – Regular',
-            'Reels – Best',
-            'Teaser – Regular',
-            'Teaser – Best',
-            'Highlight – Regular',
-            'Highlight – Best',
-            'Traditional Wedding Job',
-            'Engagement Traditional',
-            'Baby Shower',
-            'Naming Ceremony',
-            'Housewarming',
-            'Cine Teaser',
-            'Cine Highlights (3 / 5 minutes)',
-            'Cine Engagement',
-            'Cine Films (7 minutes)',
-            'Cine Films (10 / 15 minutes)',
-            'Other',
-        ];
-    }
-
     /** @return list<int> the only percentages progress may ever hold */
     public static function progressSteps(): array
     {
@@ -79,7 +55,6 @@ final class Task
         public readonly int $projectId,
         public readonly int $employeeId,
         public readonly string $title,
-        public readonly string $projectType,
         public readonly string $description,
         public readonly string $startDate,
         public readonly string $endDate,
@@ -114,7 +89,6 @@ final class Task
             projectId:     (int) $row['project_id'],
             employeeId:    (int) $row['employee_id'],
             title:         (string) $row['title'],
-            projectType:   isset($row['project_type']) ? (string) $row['project_type'] : '',
             description:   (string) $row['description'],
             startDate:     (string) $row['start_date'],
             endDate:       (string) $row['end_date'],
@@ -285,13 +259,12 @@ final class Task
         ?int $createdBy,
         ?int $parentTaskId = null,
         ?float $projectCost = null,
-        string $projectType = '',
     ): int {
         Database::statement(
             'INSERT INTO tasks
-                (serial_no, project_id, employee_id, title, project_type, description, start_date, end_date, priority, amount, created_by, parent_task_id, project_cost)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [Database::nextSerial('tasks'), $projectId, $employeeId, $title, $projectType, $description, $startDate, $endDate, $priority, $amount, $createdBy, $parentTaskId, $projectCost],
+                (serial_no, project_id, employee_id, title, description, start_date, end_date, priority, amount, created_by, parent_task_id, project_cost)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [Database::nextSerial('tasks'), $projectId, $employeeId, $title, $description, $startDate, $endDate, $priority, $amount, $createdBy, $parentTaskId, $projectCost],
         );
 
         return Database::lastInsertId();

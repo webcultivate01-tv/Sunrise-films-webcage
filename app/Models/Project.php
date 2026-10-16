@@ -23,6 +23,35 @@ final class Project
         return [self::STATUS_PENDING, self::STATUS_IN_PROGRESS, self::STATUS_COMPLETED, self::STATUS_CANCELLED];
     }
 
+    /**
+     * The kinds of work that can be registered; picked from a dropdown on the
+     * Add/Edit Project form.
+     *
+     * @return list<string>
+     */
+    public static function projectTypes(): array
+    {
+        return [
+            'Reels – Regular',
+            'Reels – Best',
+            'Teaser – Regular',
+            'Teaser – Best',
+            'Highlight – Regular',
+            'Highlight – Best',
+            'Traditional Wedding Job',
+            'Engagement Traditional',
+            'Baby Shower',
+            'Naming Ceremony',
+            'Housewarming',
+            'Cine Teaser',
+            'Cine Highlights (3 / 5 minutes)',
+            'Cine Engagement',
+            'Cine Films (7 minutes)',
+            'Cine Films (10 / 15 minutes)',
+            'Other',
+        ];
+    }
+
     public function __construct(
         public readonly int $id,
         public readonly int $photographerId,
@@ -41,6 +70,8 @@ final class Project
         public readonly ?string $createdByName = null,
         /** The "#" shown on list rows; stored in the database. */
         public readonly ?int $serialNo = null,
+        /** The kind of work (see projectTypes()); null on projects created before the field existed. */
+        public readonly ?string $projectType = null,
     ) {
     }
 
@@ -64,6 +95,7 @@ final class Project
             photographerName:   isset($row['photographer_name']) ? (string) $row['photographer_name'] : null,
             createdByName:  isset($row['created_by_name']) ? (string) $row['created_by_name'] : null,
             serialNo:       isset($row['serial_no']) ? (int) $row['serial_no'] : null,
+            projectType:    isset($row['project_type']) && $row['project_type'] !== '' ? (string) $row['project_type'] : null,
         );
     }
 
@@ -180,12 +212,13 @@ final class Project
         float $totalPayment,
         ?int $createdBy,
         string $status = self::STATUS_PENDING,
+        ?string $projectType = null,
     ): int {
         Database::statement(
             'INSERT INTO projects
-                (serial_no, photographer_id, customer_name, description, folder_name, deadline, total_payment, status, created_by)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [Database::nextSerial('projects'), $photographerId, $customerName, $description, $folderName, $deadline, $totalPayment, $status, $createdBy],
+                (serial_no, photographer_id, customer_name, project_type, description, folder_name, deadline, total_payment, status, created_by)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [Database::nextSerial('projects'), $photographerId, $customerName, $projectType, $description, $folderName, $deadline, $totalPayment, $status, $createdBy],
         );
 
         return Database::lastInsertId();
@@ -199,13 +232,14 @@ final class Project
         string $folderName,
         string $deadline,
         float $totalPayment,
+        ?string $projectType = null,
     ): void {
         Database::statement(
             'UPDATE projects
-                SET photographer_id = ?, customer_name = ?, description = ?, folder_name = ?,
+                SET photographer_id = ?, customer_name = ?, project_type = ?, description = ?, folder_name = ?,
                     deadline = ?, total_payment = ?
               WHERE id = ?',
-            [$photographerId, $customerName, $description, $folderName, $deadline, $totalPayment, $id],
+            [$photographerId, $customerName, $projectType, $description, $folderName, $deadline, $totalPayment, $id],
         );
     }
 

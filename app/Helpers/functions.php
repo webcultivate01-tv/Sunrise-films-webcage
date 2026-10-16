@@ -288,14 +288,6 @@ function task_priority_label(string $priority): string
 }
 
 /**
- * Human readable label for a task's project type.
- */
-function task_project_type_label(string $type): string
-{
-    return $type !== '' ? $type : 'Not set';
-}
-
-/**
  * Human readable date for the panels.
  */
 function pretty_date(?string $value, string $fallback = 'Never'): string

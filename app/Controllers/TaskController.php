@@ -74,7 +74,7 @@ final class TaskController extends Controller
         $user  = $this->user();
         $base  = $this->baseUrl($user);
         $input = $request->only([
-            'project_id', 'employee_id', 'project_type', 'description', 'start_date', 'end_date', 'priority', 'project_cost',
+            'project_id', 'employee_id', 'description', 'start_date', 'end_date', 'priority', 'project_cost',
         ]);
 
         TaskService::assertAccessManagement($user);

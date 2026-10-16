@@ -65,6 +65,7 @@ use App\Models\User;
                                 data-id="<?= (int) $project->id ?>"
                                 data-name="<?= e($project->customerName . ' - ' . ($project->photographerName ?? 'Unknown photographer')) ?>"
                                 data-description="<?= e($project->description) ?>"
+                                data-project-type="<?= e($project->projectType ?? '') ?>"
                                 data-deadline="<?= e(substr($project->deadline ?? '', 0, 10)) ?>">
                                 <?= e($project->customerName) ?> - <?= e($project->photographerName ?? 'Unknown photographer') ?>
                             </li>
@@ -112,16 +113,19 @@ use App\Models\User;
                 </div>
 
                 <div>
-                    <label for="field-project-type" class="mb-1.5 block text-sm font-medium text-slate-700">Project type</label>
-                    <select id="field-project-type" name="project_type" class="<?= input_classes($errors, 'project_type') ?>">
-                        <option value="">Select a project type</option>
-                        <?php foreach (\App\Models\Task::projectTypes() as $type): ?>
-                            <option value="<?= e($type) ?>" <?= old($old, 'project_type') === $type ? 'selected' : '' ?>>
-                                <?= e($type) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                    <?= field_error($errors, 'project_type') ?>
+                    <span class="mb-1.5 block text-sm font-medium text-slate-700">Project type</span>
+                    <?php
+                    $oldProjectId = old($old, 'project_id');
+                    $shownType    = '';
+                    foreach ($projects as $p) {
+                        if ((string) $p->id === $oldProjectId) {
+                            $shownType = $p->projectType ?? '';
+                            break;
+                        }
+                    }
+                    ?>
+                    <p id="task-project-type" class="rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm font-semibold text-ink"><?= $shownType !== '' ? e($shownType) : '-' ?></p>
+                    <p class="mt-1.5 text-xs text-slate-500">Taken from the selected project - this becomes the task title.</p>
                 </div>
 
                 <div class="sm:col-span-2 lg:col-span-3">
@@ -232,7 +236,12 @@ use App\Models\User;
     var descField     = document.querySelector('[data-project-description-target]');
     var endDateField  = document.getElementById('field-end');
 
+    var typeLabel = document.getElementById('task-project-type');
+
     makeSearchable('project-wrapper', 'project-list', 'project-search', 'field-project', function (li) {
+        if (typeLabel) {
+            typeLabel.textContent = li.dataset.projectType || '-';
+        }
         if (descField && li.dataset.description && !descField.value) {
             descField.value = li.dataset.description;
         }

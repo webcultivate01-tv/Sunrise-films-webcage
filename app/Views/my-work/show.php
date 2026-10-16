@@ -50,10 +50,6 @@ $nextSteps = array_filter(Task::progressSteps(), static fn (int $step): bool => 
 
             <dl class="mt-6 grid gap-x-6 gap-y-5 sm:grid-cols-2">
                 <div>
-                    <dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Project type</dt>
-                    <dd class="mt-0.5 text-sm font-medium text-ink"><?= e(task_project_type_label($task->projectType)) ?></dd>
-                </div>
-                <div>
                     <dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Customer</dt>
                     <dd class="mt-0.5 text-sm font-medium text-ink"><?= e($task->customerName ?? 'Unknown customer') ?></dd>
                 </div>

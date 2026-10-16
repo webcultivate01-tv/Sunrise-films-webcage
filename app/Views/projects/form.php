@@ -88,6 +88,27 @@ $selectedPhotographer = old($old, 'photographer_id', $project !== null ? (string
                 </div>
 
                 <div>
+                    <label for="type-button" class="mb-1.5 block text-sm font-medium text-slate-700">Project type</label>
+                    <?php $selectedType = old($old, 'project_type', $project->projectType ?? ''); ?>
+                    <div class="relative" id="type-wrapper">
+                        <button type="button" id="type-button"
+                                class="<?= input_classes($errors, 'project_type') ?> flex cursor-pointer items-center justify-between text-left">
+                            <span id="type-label" class="<?= $selectedType === '' ? 'text-slate-400' : '' ?>"><?= $selectedType !== '' ? $selectedType : 'Select project type' ?></span>
+                            <svg class="h-4 w-4 shrink-0 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                        </button>
+                        <ul id="type-list"
+                            class="absolute left-0 top-full z-20 mt-1 hidden max-h-60 w-full overflow-y-auto rounded-lg border border-line bg-white py-1 shadow-lg text-sm">
+                            <?php foreach (Project::projectTypes() as $type): ?>
+                            <li class="type-option cursor-pointer px-3 py-2 hover:bg-brand-50 hover:text-brand-700 <?= $selectedType === e($type) ? 'bg-brand-50 text-brand-700' : '' ?>"
+                                data-value="<?= e($type) ?>"><?= e($type) ?></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                    <input type="hidden" id="field-project-type" name="project_type" value="<?= $selectedType ?>">
+                    <?= field_error($errors, 'project_type') ?>
+                </div>
+
+                <div>
                     <label for="field-description" class="mb-1.5 block text-sm font-medium text-slate-700">Description</label>
                     <textarea id="field-description" name="description" rows="2"
                               class="<?= input_classes($errors, 'description') ?>"
@@ -193,6 +214,33 @@ $selectedPhotographer = old($old, 'photographer_id', $project !== null ? (string
         </div>
     </form>
 </div>
+
+<script>
+(function () {
+    var button = document.getElementById('type-button');
+    var list   = document.getElementById('type-list');
+    var hidden = document.getElementById('field-project-type');
+    var label  = document.getElementById('type-label');
+
+    if (!button || !list || !hidden || !label) return;
+
+    button.addEventListener('click', function () { list.classList.toggle('hidden'); });
+
+    Array.from(list.querySelectorAll('.type-option')).forEach(function (li) {
+        li.addEventListener('mousedown', function (e) {
+            e.preventDefault();
+            hidden.value = li.dataset.value;
+            label.textContent = li.dataset.value;
+            label.classList.remove('text-slate-400');
+            list.classList.add('hidden');
+        });
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!document.getElementById('type-wrapper').contains(e.target)) list.classList.add('hidden');
+    });
+})();
+</script>
 
 <script>
 (function () {

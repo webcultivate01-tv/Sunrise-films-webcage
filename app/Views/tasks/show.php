@@ -18,7 +18,6 @@ use App\Models\TaskDescription;
  * @var array<string, string> $old
  */
 $fields = [
-    ['label' => 'Project type', 'value' => task_project_type_label($task->projectType), 'icon' => 'folder'],
     ['label' => 'Customer', 'value' => $task->customerName ?? 'Unknown customer', 'icon' => 'folder'],
     ['label' => 'Photographer', 'value' => $task->photographerName ?? 'Unknown photographer', 'icon' => 'user'],
     ['label' => 'Editor', 'value' => $task->employeeName ?? 'Unknown editor', 'icon' => 'user'],

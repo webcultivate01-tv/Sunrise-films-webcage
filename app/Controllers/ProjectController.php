@@ -80,7 +80,7 @@ final class ProjectController extends Controller
         $user  = $this->user();
         $base  = $this->baseUrl($user);
         $input = $request->only([
-            'photographer_id', 'customer_name', 'description', 'folder_name', 'deadline', 'total_payment',
+            'photographer_id', 'customer_name', 'project_type', 'description', 'folder_name', 'deadline', 'total_payment',
             'payment_amount', 'payment_type', 'payment_method',
         ]);
 
@@ -249,7 +249,7 @@ final class ProjectController extends Controller
         $project = ProjectService::findOrFail($user, (int) $params['id']);
         $base    = $this->baseUrl($user);
         $input   = $request->only([
-            'photographer_id', 'customer_name', 'description', 'folder_name', 'deadline', 'total_payment',
+            'photographer_id', 'customer_name', 'project_type', 'description', 'folder_name', 'deadline', 'total_payment',
         ]);
 
         $validator = ProjectService::validate($input, $project);
